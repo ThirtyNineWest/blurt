@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Blurt.Engine.Audio;
@@ -18,7 +19,7 @@ namespace Blurt.Engine.Pipeline;
 /// <remarks>
 /// Press, release, and the two cancels run one at a time in arrival order on a serial queue.
 /// Session state is guarded by one lock, and every phase change goes through one funnel that
-/// publishes it, abandons the upload on a terminal phase, and logs a failure. A cancel acts at once
+/// publishes it in order, abandons the upload on a terminal phase, and logs a failure. A cancel acts at once
 /// on a bring-up, a transcribe, or a paste in flight, and deterministically wins over a release
 /// racing the mic stop.
 /// </remarks>
@@ -41,6 +42,7 @@ public sealed partial class DictationSession : IAsyncDisposable
     private readonly Func<BlurtError?> _readinessCheck;
     private readonly Action<string, RecentDictations>? _onTranscriptDelivered;
     private readonly Channel<Command> _commands = Channel.CreateUnbounded<Command>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly BlockingCollection<PipelinePhase> _phaseEvents = [];
 
     // Every field below is guarded by _gate.
     private readonly Lock _gate = new();
@@ -97,9 +99,13 @@ public sealed partial class DictationSession : IAsyncDisposable
         _readinessCheck = readinessCheck ?? (static () => null);
         _onTranscriptDelivered = onTranscriptDelivered;
         _ = Task.Run(ConsumeCommandsAsync);
+        _ = Task.Factory.StartNew(DispatchPhaseEvents, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
-    /// <summary>Raised after every phase change, on the thread that made it.</summary>
+    /// <summary>
+    /// Raised after every phase change, in the order the phase took them, from one dispatcher thread;
+    /// never on the caller's thread. Changes made before the session is disposed are still raised.
+    /// </summary>
     public event Action<PipelinePhase>? PhaseChanged;
 
     /// <summary>The current phase.</summary>
@@ -182,8 +188,10 @@ public sealed partial class DictationSession : IAsyncDisposable
             }
 
             _disposed = true;
+            _phaseEvents.CompleteAdding();
             toCancel = [_uploadCts, _pipelineRun?.Cts, _inFlightPressCts, _autoReleaseCts];
             _uploadCts = null;
+            ObserveFaults(_upload);
             _upload = null;
             _pipelineRun = null;
             _autoReleaseCts = null;
@@ -216,6 +224,14 @@ public sealed partial class DictationSession : IAsyncDisposable
             BlurtLog.Error(LogCategory, $"a cancellation callback failed: {ex.InnerException?.GetType().Name}");
         }
     }
+
+    /// <summary>Marks a detached upload's fault as observed, so abandoning it never raises <see cref="TaskScheduler.UnobservedTaskException"/>.</summary>
+    private static void ObserveFaults(Task? task) =>
+        task?.ContinueWith(
+            static t => _ = t.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
 
     // Starts op once every previously chained op has finished. The forced yield keeps op off the
     // caller's thread, so chaining under _gate never runs op while the lock is held.
@@ -261,22 +277,28 @@ public sealed partial class DictationSession : IAsyncDisposable
 
     /// <summary>
     /// The only writer of <see cref="_phase"/>. Queues a failure to the error log before the phase is
-    /// visible, so an observer that sees it and then drains the log finds the entry. Queues the phase
-    /// to every stream in order, and on a terminal phase detaches the in-flight upload for
-    /// <see cref="Publish"/> to cancel. The caller must hold <see cref="_gate"/> and then call
-    /// <see cref="Publish"/> after releasing it.
+    /// visible to any observer, so one that sees it and then drains the log finds the entry. Queues
+    /// the phase to every stream and to the <see cref="PhaseChanged"/> dispatcher, both in assignment
+    /// order, and on a terminal phase detaches the in-flight upload for <see cref="Publish"/> to
+    /// cancel. The caller must hold <see cref="_gate"/> and then call <see cref="Publish"/> after
+    /// releasing it.
     /// </summary>
     private PhaseChange AssignLocked(PipelinePhase next)
     {
+        _phase = next;
         if (next is PipelinePhase.FailedPhase failed)
         {
             _log.AppendError(failed.Error, _pressContext?.Resolved);
         }
 
-        _phase = next;
         foreach (var subscriber in _subscribers)
         {
             subscriber.Writer.TryWrite(next);
+        }
+
+        if (!_disposed)
+        {
+            _phaseEvents.Add(next);
         }
 
         CancellationTokenSource? upload = null;
@@ -284,23 +306,29 @@ public sealed partial class DictationSession : IAsyncDisposable
         {
             upload = _uploadCts;
             _uploadCts = null;
+            ObserveFaults(_upload);
             _upload = null;
         }
 
         return new PhaseChange(next, upload);
     }
 
-    /// <summary>The outside-the-lock half of a phase change: abandon the upload, raise the event.</summary>
-    private void Publish(PhaseChange change)
+    /// <summary>The outside-the-lock half of a phase change: abandon the detached upload.</summary>
+    private void Publish(PhaseChange change) => CancelQuietly(change.UploadToCancel);
+
+    /// <summary>Raises <see cref="PhaseChanged"/> for each queued phase, in order, until the session is disposed.</summary>
+    private void DispatchPhaseEvents()
     {
-        CancelQuietly(change.UploadToCancel);
-        try
+        foreach (var phase in _phaseEvents.GetConsumingEnumerable())
         {
-            PhaseChanged?.Invoke(change.Phase);
-        }
-        catch (Exception ex)
-        {
-            BlurtLog.Error(LogCategory, $"a PhaseChanged handler threw {ex.GetType().Name}");
+            try
+            {
+                PhaseChanged?.Invoke(phase);
+            }
+            catch (Exception ex)
+            {
+                BlurtLog.Error(LogCategory, $"a PhaseChanged handler threw {ex.GetType().Name}");
+            }
         }
     }
 

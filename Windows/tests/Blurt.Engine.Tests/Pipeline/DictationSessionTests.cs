@@ -227,6 +227,15 @@ public sealed class DictationSessionTests
         };
 
         await harness.DictateAsync();
+        await SessionWaits.WaitUntilAsync(
+            () =>
+            {
+                lock (gate)
+                {
+                    return raised.Count == 5;
+                }
+            },
+            "five events");
 
         lock (gate)
         {

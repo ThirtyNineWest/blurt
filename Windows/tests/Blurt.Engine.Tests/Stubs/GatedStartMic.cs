@@ -18,6 +18,13 @@ public sealed class GatedStartMic : IMicCapture
     /// <summary>Whether the gated wait honors the start token.</summary>
     public bool ThrowsIfCancelled { get; init; }
 
+    /// <summary>
+    /// When set, a start token cancelled during the gated wait makes <see cref="StartAsync"/> throw
+    /// this instead of <see cref="OperationCanceledException"/>, as a device layer that reports the
+    /// abort in its own terms would.
+    /// </summary>
+    public Exception? ErrorWhenCancelled { get; init; }
+
     /// <summary>The token passed to the most recent <see cref="StartAsync"/>.</summary>
     public CancellationToken ReceivedToken { get; private set; }
 
@@ -35,7 +42,15 @@ public sealed class GatedStartMic : IMicCapture
     {
         Interlocked.Increment(ref _startCalls);
         ReceivedToken = ct;
-        await _gate.EnterAsync(ThrowsIfCancelled ? ct : CancellationToken.None);
+        try
+        {
+            await _gate.EnterAsync(ThrowsIfCancelled || ErrorWhenCancelled is not null ? ct : CancellationToken.None);
+        }
+        catch (OperationCanceledException) when (ErrorWhenCancelled is { } error)
+        {
+            throw error;
+        }
+
         return StubFeeds.OneShot(StubPcm.AboveMinimum);
     }
 

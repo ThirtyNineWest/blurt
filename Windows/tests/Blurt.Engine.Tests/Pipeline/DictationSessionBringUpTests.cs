@@ -63,6 +63,25 @@ public sealed class DictationSessionBringUpTests
     }
 
     [Test]
+    public async Task AMicThatReportsACancelledStartAsAnErrorStillEndsCancelledAndLeavesNoStandingCancel()
+    {
+        var mic = new GatedStartMic { ErrorWhenCancelled = new IOException("device aborted") };
+        await using var harness = new SessionHarness(mic: mic);
+        var pressed = harness.Session.PressAsync();
+        await mic.WaitUntilStartEnteredAsync();
+        await harness.Session.CancelAsync();
+        await pressed;
+        var afterCancel = harness.Session.Phase;
+        mic.AllowStartToFinish();
+
+        await harness.Session.PressAsync();
+
+        afterCancel.Should().Be(PipelinePhase.Cancelled);
+        (await harness.Log.FailuresAsync()).Should().BeEmpty();
+        harness.Session.Phase.Should().Be(PipelinePhase.Recording);
+    }
+
+    [Test]
     public async Task ACancelThatAbortsTheBringUpDoesNotLeakIntoTheNextPress()
     {
         var mic = new GatedStartMic { ThrowsIfCancelled = true };

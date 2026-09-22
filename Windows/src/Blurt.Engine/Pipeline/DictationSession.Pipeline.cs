@@ -33,6 +33,7 @@ public sealed partial class DictationSession
         {
             cts = _uploadCts;
             _uploadCts = null;
+            ObserveFaults(_upload);
             _upload = null;
         }
 
@@ -145,7 +146,17 @@ public sealed partial class DictationSession
             return;
         }
 
-        var style = _styleNameProvider();
+        string? style;
+        try
+        {
+            style = _styleNameProvider();
+        }
+        catch (Exception ex)
+        {
+            BlurtLog.Error(LogCategory, $"styleNameProvider threw {ex.GetType().Name}");
+            style = null;
+        }
+
         var now = _clock.GetUtcNow();
         TranscriptionContext? context;
         RecentDictations snapshot;

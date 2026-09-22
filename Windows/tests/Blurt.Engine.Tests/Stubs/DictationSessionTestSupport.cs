@@ -231,13 +231,14 @@ public sealed class SessionHarness : IAsyncDisposable
         IReadOnlyList<string>? keyTerms = null,
         Func<IReadOnlyList<string>>? keyTermsProvider = null,
         Func<string?>? styleNameProvider = null,
-        Func<BlurtError?>? readinessCheck = null)
+        Func<BlurtError?>? readinessCheck = null,
+        Func<bool>? logEnabled = null)
     {
         MicCapture = mic ?? new StubMicCapture();
         TranscriberSeam = transcriber ?? new StubTranscriber { TranscriptToReturn = "Hello world." };
         InjectorSeam = injector ?? new StubInjector();
         Focus = focus ?? new StubFocusCapture();
-        Log = new TestLog(clock);
+        Log = new TestLog(clock, logEnabled);
         IReadOnlyList<string> terms = keyTerms ?? [];
         Session = new DictationSession(
             MicCapture,

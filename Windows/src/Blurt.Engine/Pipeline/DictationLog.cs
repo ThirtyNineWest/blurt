@@ -12,7 +12,8 @@ namespace Blurt.Engine.Pipeline;
 /// <summary>
 /// The developer-mode log: completed transcripts append to <see cref="DictationsPath"/> and failures
 /// to <see cref="ErrorsPath"/>, one JSON object per line with sorted keys. Every append is gated on
-/// <c>isEnabled</c> at call time, so with developer mode off nothing touches the disk. Writes run in
+/// <c>isEnabled</c> at call time, so with developer mode off nothing touches the disk; a switch that
+/// throws reads as off. Writes run in
 /// order on one background consumer and never throw onto the caller; a failed write is reported
 /// through <see cref="BlurtLog"/> by file name only.
 /// </summary>
@@ -190,7 +191,18 @@ public sealed partial class DictationLog
 
     private void Gated(Action<DateTimeOffset> write)
     {
-        if (!_isEnabled())
+        bool enabled;
+        try
+        {
+            enabled = _isEnabled();
+        }
+        catch (Exception ex)
+        {
+            BlurtLog.Error(LogCategory, $"the developer-mode switch threw {ex.GetType().Name}; treating it as off");
+            enabled = false;
+        }
+
+        if (!enabled)
         {
             return;
         }

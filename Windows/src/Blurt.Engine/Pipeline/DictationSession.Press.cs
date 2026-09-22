@@ -52,11 +52,12 @@ public sealed partial class DictationSession
         {
             frames = await started;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException || IsCancelRequested(pressToken))
         {
-            // The cancel arrived during the liveness wait. Consuming the request here matters: the
-            // Connecting branch of CancelAsync queues no turn that would clear it, and a request left
-            // standing would cancel the next press.
+            // The cancel arrived during the liveness wait; a mic may report the abort as any
+            // exception. Consuming the request here matters: the Connecting branch of CancelAsync
+            // queues no turn that would clear it, and a request left standing would cancel the next
+            // press.
             if (!ConsumeCancelRequest())
             {
                 SetPhase(PipelinePhase.Cancelled);

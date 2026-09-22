@@ -138,6 +138,121 @@ public sealed class CancelRaceTests
     }
 
     [Test]
+    public async Task ASubmittedCancelDuringTranscribingDoesNotCancelTheNextPress()
+    {
+        var transcriber = new GatedTranscriber("Hello world.");
+        await using var harness = new SessionHarness(transcriber: transcriber);
+        await harness.Session.PressAsync();
+        await harness.Session.ReleaseAsync();
+        await transcriber.WaitUntilStartedAsync();
+
+        harness.Session.Submit(Command.Cancel);
+        await harness.Session.WaitForPhaseAsync(PipelinePhase.Cancelled);
+        transcriber.AllowToFinish();
+        await harness.Session.AwaitPipelineAsync().WaitAsync(SessionWaits.Budget);
+        await harness.Session.PressAsync();
+
+        harness.Session.Phase.Should().Be(PipelinePhase.Recording);
+    }
+
+    [Test]
+    public async Task ASubmittedCancelDuringInjectingDoesNotCancelTheNextPress()
+    {
+        var injector = new GatedInjector();
+        await using var harness = new SessionHarness(injector: injector);
+        await harness.Session.PressAsync();
+        await harness.Session.ReleaseAsync();
+        await injector.WaitUntilInsertEnteredAsync();
+
+        harness.Session.Submit(Command.Cancel);
+        await harness.Session.WaitForPhaseAsync(PipelinePhase.Cancelled);
+        injector.AllowInsertToFinish();
+        await harness.Session.AwaitPipelineAsync().WaitAsync(SessionWaits.Budget);
+        await harness.Session.PressAsync();
+
+        harness.Session.Phase.Should().Be(PipelinePhase.Recording);
+    }
+
+    [Test]
+    public async Task PhaseChangedDeliversACancelRacingAPipelineTransitionLast()
+    {
+        for (var iteration = 0; iteration < 50; iteration++)
+        {
+            var transcriber = new GatedTranscriber("Hello world.");
+            var injector = new GatedInjector();
+            await using var harness = new SessionHarness(transcriber: transcriber, injector: injector);
+            var raised = new List<PipelinePhase>();
+            harness.Session.PhaseChanged += phase =>
+            {
+                lock (raised)
+                {
+                    raised.Add(phase);
+                }
+            };
+            await harness.Session.PressAsync();
+            await harness.Session.ReleaseAsync();
+            await transcriber.WaitUntilStartedAsync();
+
+            var finishing = Task.Run(transcriber.AllowToFinish);
+            await harness.Session.CancelAsync();
+            await finishing;
+            await SessionWaits.WaitUntilAsync(
+                () =>
+                {
+                    lock (raised)
+                    {
+                        return raised.Contains(PipelinePhase.Cancelled);
+                    }
+                },
+                "the Cancelled event");
+            injector.AllowInsertToFinish();
+            await harness.Session.AwaitPipelineAsync().WaitAsync(SessionWaits.Budget);
+
+            lock (raised)
+            {
+                raised[^1].Should().Be(PipelinePhase.Cancelled, $"iteration {iteration} raised [{string.Join(", ", raised)}]");
+            }
+        }
+    }
+
+    [Test]
+    public async Task PhaseChangedIsNeverRaisedOnTheCallersThread()
+    {
+        var mic = new GatedStartMic();
+        await using var harness = new SessionHarness(mic: mic);
+        var raisedOn = new List<(PipelinePhase Phase, int Thread)>();
+        harness.Session.PhaseChanged += phase =>
+        {
+            lock (raisedOn)
+            {
+                raisedOn.Add((phase, Environment.CurrentManagedThreadId));
+            }
+        };
+        var pressed = harness.Session.PressAsync();
+        await mic.WaitUntilStartEnteredAsync();
+
+        var callerThread = Environment.CurrentManagedThreadId;
+        var cancelled = harness.Session.CancelAsync();
+        mic.AllowStartToFinish();
+        await cancelled;
+        await pressed;
+        await SessionWaits.WaitUntilAsync(
+            () =>
+            {
+                lock (raisedOn)
+                {
+                    return raisedOn.Any(r => r.Phase == PipelinePhase.Cancelled);
+                }
+            },
+            "the Cancelled event");
+
+        lock (raisedOn)
+        {
+            raisedOn.Where(r => r.Phase == PipelinePhase.Cancelled).Select(r => r.Thread).Should().NotContain(callerThread);
+        }
+    }
+
+    [Test]
     public async Task CancelOfALiveRecordingSurvivesAFailingMicTeardown()
     {
         await using var harness = new SessionHarness();

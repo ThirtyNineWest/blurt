@@ -76,6 +76,9 @@ public sealed partial class DictationSession
         {
             if (_phase == PipelinePhase.Transcribing || _phase == PipelinePhase.Injecting)
             {
+                // The claim consumes the intent a submitted cancel recorded; left standing, it would
+                // cancel the next press.
+                _cancelRequested = false;
                 toCancel = _pipelineRun?.Cts;
                 _pipelineRun = null;
                 claimed = AssignLocked(PipelinePhase.Cancelled);
@@ -155,6 +158,15 @@ public sealed partial class DictationSession
     {
         _cancelRequested = true;
         return _inFlightPressCts;
+    }
+
+    /// <summary>Whether a cancel was requested for the press running under <paramref name="pressToken"/>.</summary>
+    private bool IsCancelRequested(CancellationToken pressToken)
+    {
+        lock (_gate)
+        {
+            return _cancelRequested || pressToken.IsCancellationRequested;
+        }
     }
 
     /// <summary>Consumes a recorded cancel intent by claiming <see cref="PipelinePhase.Cancelled"/>; returns whether one was recorded.</summary>
