@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>Blurt</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 assumes WinForms owns DPI awareness; this app is WPF-hosted and sets
+         PerMonitorV2 through the manifest, which the WinForms analyzer does not recognize. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Blurt.Engine\Blurt.Engine.csproj" />
+    <ProjectReference Include="..\Blurt.Engine.Windows\Blurt.Engine.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

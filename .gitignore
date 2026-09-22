@@ -36,3 +36,11 @@ __pycache__/
 # working notes rather than repo content — quote a number into the PR instead.
 results*.json
 *.log
+
+# Windows port (Windows/)
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+Windows/publish/
