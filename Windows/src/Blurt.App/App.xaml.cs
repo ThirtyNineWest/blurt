@@ -153,7 +153,7 @@ public partial class App : Application
             () => _settingsWindow is { IsActive: true } active ? active : (Window?)_mainWindow);
 
         var settingsWindow = new SettingsWindow(
-            new SettingsViewModel(settings, dictation, styles, updates, log),
+            new SettingsViewModel(settings, dictation, styles, updates, log, apiKey),
             new InstallReset(settings.Store, apiKey, log),
             RestartAfterReset);
         _settingsWindow = settingsWindow;

@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         Title = HostIdentity.Current.ProductName;
         Wizard.DataContext = wizard;
         Ready.DataContext = ready;
-        _apiKeyStep.DataContext = wizard;
+        _apiKeyStep.DataContext = wizard.KeyEntry;
         _microphoneStep.DataContext = wizard;
         _shortcutStep.DataContext = wizard.Dictation;
         _soundStep.DataContext = wizard.Dictation;

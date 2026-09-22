@@ -1,13 +1,28 @@
+using System.Windows;
 using System.Windows.Controls;
 
 namespace Blurt.App.Settings;
 
-/// <summary>The General tab: the shortcut and sound sections the wizard also shows. Binds to a <see cref="SettingsViewModel"/>.</summary>
+/// <summary>
+/// The General tab: the AssemblyAI account row, then the shortcut and sound sections the wizard also
+/// shows. Binds to a <see cref="SettingsViewModel"/>.
+/// </summary>
 public partial class GeneralTab : UserControl
 {
     /// <summary>Creates the tab.</summary>
     public GeneralTab()
     {
         InitializeComponent();
+    }
+
+    private void OnEditKeyClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel model)
+        {
+            return;
+        }
+
+        model.Account.ResetDraft();
+        new ApiKeyEditorWindow(model.Account) { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 }

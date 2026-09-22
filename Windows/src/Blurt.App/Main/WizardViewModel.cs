@@ -23,9 +23,6 @@ public sealed class WizardViewModel : ObservableObject
     private readonly SetupWizard _wizard;
     private PermissionStatus _status;
     private bool _isReady;
-    private bool _draftHasText;
-    private bool _isSubmitting;
-    private string? _inlineError;
     private bool _isTestingMicrophone;
     private string? _microphoneTestResult;
 
@@ -35,6 +32,7 @@ public sealed class WizardViewModel : ObservableObject
         _coordinator = coordinator;
         _permissions = permissions;
         Dictation = dictation;
+        KeyEntry = new ApiKeyEntryViewModel(coordinator.ApiKey);
         _status = permissions.Check();
         _isReady = SetupReadiness.IsReady(_status, coordinator.ApiKey.HasKey);
         _wizard = new SetupWizard(_isReady);
@@ -46,6 +44,7 @@ public sealed class WizardViewModel : ObservableObject
 
         coordinator.ApiKey.PropertyChanged += OnApiKeyChanged;
         dictation.PropertyChanged += OnDictationChanged;
+        KeyEntry.Saved += OnKeySaved;
     }
 
     /// <summary>Raised when a previously granted permission was revoked, so the window can come forward.</summary>
@@ -75,44 +74,8 @@ public sealed class WizardViewModel : ObservableObject
     /// <summary>"Finish" on the last step, "Continue" before it.</summary>
     public string ContinueTitle => _wizard.IsLastStep ? "Finish" : "Continue";
 
-    /// <summary>How the stored key is presented.</summary>
-    public ApiKeyDisplay KeyDisplay => ApiKeyDisplay.Resolve(_coordinator.ApiKey.Current);
-
-    /// <summary>Whether the key field holds non-blank text.</summary>
-    public bool DraftHasText
-    {
-        get => _draftHasText;
-        set
-        {
-            if (Set(ref _draftHasText, value))
-            {
-                Raise(nameof(CanSubmit));
-            }
-        }
-    }
-
-    /// <summary>Whether a key validation is in flight.</summary>
-    public bool IsSubmitting
-    {
-        get => _isSubmitting;
-        private set
-        {
-            if (Set(ref _isSubmitting, value))
-            {
-                Raise(nameof(CanSubmit));
-            }
-        }
-    }
-
-    /// <summary>Whether the commit button is enabled: a non-blank draft and no validation in flight.</summary>
-    public bool CanSubmit => DraftHasText && !IsSubmitting;
-
-    /// <summary>A recoverable submission error shown under the field, or null.</summary>
-    public string? InlineError
-    {
-        get => _inlineError;
-        set => Set(ref _inlineError, value);
-    }
+    /// <summary>The API key step's entry; a saved key advances past that step.</summary>
+    public ApiKeyEntryViewModel KeyEntry { get; }
 
     /// <summary>Whether microphone access is granted, as of the last poll.</summary>
     public bool MicrophoneGranted => _status.Microphone;
@@ -179,54 +142,15 @@ public sealed class WizardViewModel : ObservableObject
         }
     }
 
-    /// <summary>Moves the wizard to the API key step.</summary>
+    /// <summary>
+    /// Re-reads whether a key is stored, then moves the wizard to the API key step, so a key deleted
+    /// outside the app shows the step instead of the ready view.
+    /// </summary>
     public void ShowApiKeyStep()
     {
+        _coordinator.ApiKey.RefreshStatus();
         _wizard.Show(SetupStep.ApiKey);
         RaiseWizard();
-    }
-
-    /// <summary>
-    /// Validates <paramref name="key"/> and saves it only when AssemblyAI accepts it. A recoverable
-    /// failure lands in <see cref="InlineError"/>; an accepted key advances the wizard. Returns the
-    /// failure report, or null when the key was saved.
-    /// </summary>
-    public async Task<ApiKeyFailureReport?> SubmitAsync(string key)
-    {
-        if (!CanSubmit)
-        {
-            return null;
-        }
-
-        IsSubmitting = true;
-        InlineError = null;
-        ApiKeySubmissionOutcome outcome;
-        try
-        {
-            outcome = await _coordinator.ApiKey.SubmitAsync(key);
-        }
-        finally
-        {
-            IsSubmitting = false;
-        }
-
-        BlurtLog.Info(LogCategory, $"key submission: {outcome}");
-        var report = ApiKeySubmission.FailureReport(outcome);
-        Raise(nameof(KeyDisplay));
-        if (report is ApiKeyFailureReport.InlineReport inline)
-        {
-            InlineError = inline.Message;
-        }
-
-        if (report is null)
-        {
-            if (Step == SetupStep.ApiKey)
-            {
-                Continue();
-            }
-        }
-
-        return report;
     }
 
     /// <summary>Opens Windows Settings at Privacy &gt; Microphone.</summary>
@@ -294,10 +218,14 @@ public sealed class WizardViewModel : ObservableObject
     private void RaiseWizard() =>
         Raise(nameof(Step), nameof(StepCaption), nameof(CanGoBack), nameof(CanContinue), nameof(ContinueTitle), nameof(ShowsReadyView));
 
-    private void OnApiKeyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnApiKeyChanged(object? sender, PropertyChangedEventArgs e) => SyncReadiness();
+
+    private void OnKeySaved()
     {
-        Raise(nameof(KeyDisplay));
-        SyncReadiness();
+        if (Step == SetupStep.ApiKey)
+        {
+            Continue();
+        }
     }
 
     private void OnDictationChanged(object? sender, PropertyChangedEventArgs e)

@@ -11,7 +11,7 @@ namespace Blurt.App.Main.Steps;
 /// <summary>
 /// The API key step: a masked field whose commit validates the key with AssemblyAI before saving.
 /// A recoverable failure shows inline under the field; a storage fault shows as an alert.
-/// Binds to a <see cref="WizardViewModel"/>.
+/// Binds to an <see cref="ApiKeyEntryViewModel"/>.
 /// </summary>
 public partial class ApiKeyStep : UserControl
 {
@@ -26,7 +26,7 @@ public partial class ApiKeyStep : UserControl
         Loaded += (_, _) => KeyField.Focus();
     }
 
-    private WizardViewModel? Model => DataContext as WizardViewModel;
+    private ApiKeyEntryViewModel? Model => DataContext as ApiKeyEntryViewModel;
 
     private void OnPasswordChanged(object sender, RoutedEventArgs e)
     {
@@ -41,7 +41,7 @@ public partial class ApiKeyStep : UserControl
 
     private async void OnSubmitClick(object sender, RoutedEventArgs e)
     {
-        if (Model is not { } model || KeyField.Password.TrimmedNonEmpty() is not { } key)
+        if (Model is not { CanSubmit: true } model || KeyField.Password.TrimmedNonEmpty() is not { } key)
         {
             return;
         }

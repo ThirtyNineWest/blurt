@@ -21,9 +21,10 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
+              <!-- No GroupName: a shared group unchecks siblings before this button writes its source, which can
+                   revert the click. Exclusivity comes from StyleChoices re-marking every entry. -->
               <RadioButton Margin="0,2,6,2"
                            Padding="10,3"
-                           GroupName="OutputStyle"
                            Style="{StaticResource {x:Type ToggleButton}}"
                            Content="{Binding Name, Mode=OneWay}"
                            IsChecked="{Binding IsActive, Mode=TwoWay}" />

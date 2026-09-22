@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using Blurt.App.Main;
 using Blurt.App.Services;
 using Blurt.App.Update;
 using Blurt.Engine.Config;
@@ -9,7 +10,7 @@ using Blurt.Engine.Update;
 namespace Blurt.App.Settings;
 
 /// <summary>
-/// Backs the Settings window: the shared pickers and styles, the update check with its "last
+/// Backs the Settings window: the account row, the shared pickers and styles, the update check with its "last
 /// checked" caption, and the developer-mode switch with the two log paths. Use on the UI thread.
 /// </summary>
 public sealed class SettingsViewModel : ObservableObject
@@ -23,17 +24,22 @@ public sealed class SettingsViewModel : ObservableObject
         DictationSettingsViewModel dictation,
         StylesViewModel styles,
         UpdateCheckModel updates,
-        DictationLog log)
+        DictationLog log,
+        ApiKeyModel apiKey)
     {
         _developerMode = settings.DeveloperMode;
         _lastUpdateCheck = settings.LastUpdateCheck;
         Dictation = dictation;
+        Account = new ApiKeyEntryViewModel(apiKey);
         Styles = styles;
         Updates = updates;
         DictationsPath = log.DictationsPath;
         ErrorsPath = log.ErrorsPath;
         updates.PropertyChanged += OnUpdatesChanged;
     }
+
+    /// <summary>The account row and its key editor.</summary>
+    public ApiKeyEntryViewModel Account { get; }
 
     /// <summary>The trigger key, activation, and cue voice pickers.</summary>
     public DictationSettingsViewModel Dictation { get; }
