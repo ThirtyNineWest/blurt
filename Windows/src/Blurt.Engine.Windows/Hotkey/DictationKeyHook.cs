@@ -71,7 +71,8 @@ public sealed class DictationKeyHook : IDisposable
     }
 
     /// <summary>
-    /// Re-reads the binding and installs the hook if it is not installed. Idempotent.
+    /// Re-reads the binding and installs the hook if it is not installed, replacing a hook whose
+    /// thread has exited. Idempotent while the hook is installed.
     /// </summary>
     /// <returns>Whether the hook is installed; false when installation failed, so the caller can retry.</returns>
     public bool EnsureRunning()
@@ -81,7 +82,14 @@ public sealed class DictationKeyHook : IDisposable
         {
             if (_hook is not null)
             {
-                return true;
+                if (_hook.IsInstalled)
+                {
+                    return true;
+                }
+
+                _hook.RawKey -= HandleRawKey;
+                _hook.Dispose();
+                _hook = null;
             }
 
             var hook = new LowLevelKeyboardHook();
@@ -148,12 +156,12 @@ public sealed class DictationKeyHook : IDisposable
     /// Reduces one raw hook delivery and routes it at the current elapsed time. This is the handler
     /// the installed hook calls.
     /// </summary>
-    public void HandleRawKey(int message, int vkCode, uint flags, nuint extraInfo)
+    public void HandleRawKey(int message, int vkCode, int scanCode, uint flags, nuint extraInfo)
     {
         DictationKeyGate.Action action;
         lock (_routerGate)
         {
-            var routed = HookEventReducer.Reduce(message, vkCode, flags, extraInfo, _router.TriggerKeyCode);
+            var routed = HookEventReducer.Reduce(message, vkCode, scanCode, flags, extraInfo, _router.TriggerKeyCode);
             if (routed is null)
             {
                 return;

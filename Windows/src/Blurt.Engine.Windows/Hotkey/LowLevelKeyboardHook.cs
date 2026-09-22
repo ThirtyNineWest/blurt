@@ -13,6 +13,8 @@ public sealed class LowLevelKeyboardHook : IDisposable
 {
     private const string LogCategory = "LowLevelKeyboardHook";
 
+    private static int s_hasLoggedInstallFailure;
+
     /// <summary>
     /// Holds the callback delegate for the hook's lifetime; the native side keeps only a function
     /// pointer, so a collected delegate would crash the process on the next keystroke.
@@ -30,11 +32,11 @@ public sealed class LowLevelKeyboardHook : IDisposable
     }
 
     /// <summary>
-    /// Raised on the hook thread with <c>(message, vkCode, flags, extraInfo)</c> for every keyboard
+    /// Raised on the hook thread with <c>(message, vkCode, scanCode, flags, extraInfo)</c> for every keyboard
     /// event. Handlers run inside the system's low-level hook timeout and must not block; an
     /// exception a handler throws is logged and does not reach the hook chain.
     /// </summary>
-    public event Action<int, int, uint, nuint>? RawKey;
+    public event Action<int, int, int, uint, nuint>? RawKey;
 
     /// <summary>Whether the hook is currently installed.</summary>
     public bool IsInstalled => Volatile.Read(ref _hook) != 0;
@@ -114,7 +116,12 @@ public sealed class LowLevelKeyboardHook : IDisposable
             0);
         if (hook == 0)
         {
-            BlurtLog.Error(LogCategory, $"SetWindowsHookExW failed (error {Marshal.GetLastPInvokeError()})");
+            var error = Marshal.GetLastPInvokeError();
+            if (Interlocked.Exchange(ref s_hasLoggedInstallFailure, 1) == 0)
+            {
+                BlurtLog.Error(LogCategory, $"SetWindowsHookExW failed (error {error})");
+            }
+
             ready.Set();
             return;
         }
@@ -144,12 +151,19 @@ public sealed class LowLevelKeyboardHook : IDisposable
             if (nCode >= 0)
             {
                 var data = (User32Hook.KbdLlHookStruct*)lParam;
-                RawKey?.Invoke((int)wParam, (int)data->VkCode, data->Flags, data->ExtraInfo);
+                RawKey?.Invoke((int)wParam, (int)data->VkCode, (int)data->ScanCode, data->Flags, data->ExtraInfo);
             }
         }
         catch (Exception exception)
         {
-            BlurtLog.Error(LogCategory, $"keyboard hook handler threw: {exception}");
+            // An exception escaping a native callback ends the process, and the log sink is replaceable.
+            try
+            {
+                BlurtLog.Error(LogCategory, $"keyboard hook handler threw: {exception}");
+            }
+            catch
+            {
+            }
         }
 
         return User32Hook.CallNextHookEx(0, nCode, wParam, lParam);

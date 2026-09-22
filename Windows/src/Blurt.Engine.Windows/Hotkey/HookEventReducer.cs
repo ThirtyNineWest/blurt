@@ -16,14 +16,35 @@ public static class HookEventReducer
     public const nuint InjectedTag = 0x424C5254;
 
     /// <summary>
+    /// The scan code of the synthetic <c>VK_LCONTROL</c> down an AltGr layout emits with every Right
+    /// Alt down, including auto-repeats: Control's <c>0x1D</c> with the <c>0x200</c> fake bit, which a
+    /// physical key never carries (a physical key's extended bit travels in <c>flags</c>).
+    /// </summary>
+    public const int AltGrFakeControlScanCode = 0x21D;
+
+    private const int VkLeftControl = 0xA2;
+
+    /// <summary>
     /// Returns a <see cref="DictationKeyRouter.Event.FlagsChanged"/> for a down or up of the trigger,
     /// a <see cref="DictationKeyRouter.Event.KeyDown"/> for a down of any other key, and null for an
-    /// event carrying <see cref="InjectedTag"/>, a key-up of another key, or any other message.
+    /// event carrying <see cref="InjectedTag"/>, AltGr's fake Left Control, a key-up of another key,
+    /// or any other message.
     /// </summary>
+    /// <remarks>
+    /// The fake Left Control is recognized by the documented <see cref="AltGrFakeControlScanCode"/>
+    /// signature; without that filter it reads as a combo and cancels every Right Alt hold. If that
+    /// signature ever fails, the fallback signal is a Left Control down immediately preceding the
+    /// Right Alt down with the same <c>time</c>.
+    /// </remarks>
     public static DictationKeyRouter.Event? Reduce(
-        int message, int vkCode, uint flags, nuint extraInfo, int triggerKeyCode)
+        int message, int vkCode, int scanCode, uint flags, nuint extraInfo, int triggerKeyCode)
     {
         if (extraInfo == InjectedTag)
+        {
+            return null;
+        }
+
+        if (vkCode == VkLeftControl && scanCode == AltGrFakeControlScanCode)
         {
             return null;
         }
