@@ -10,19 +10,25 @@ namespace Blurt.App.Main;
 /// key is presented, the commit button's state, and the validate-then-save submission. Use on the
 /// UI thread.
 /// </summary>
-public sealed class ApiKeyEntryViewModel : ObservableObject
+public sealed class ApiKeyEntryViewModel : ObservableObject, IDisposable
 {
     private const string LogCategory = "ApiKeyEntry";
 
     private readonly ApiKeyModel _apiKey;
+    private readonly CancellationToken _lifetime;
     private bool _draftHasText;
     private bool _isSubmitting;
     private string? _inlineError;
 
-    /// <summary>Creates the entry over <paramref name="apiKey"/>, re-presenting the key whenever <see cref="ApiKeyModel.HasKey"/> moves.</summary>
-    public ApiKeyEntryViewModel(ApiKeyModel apiKey)
+    /// <summary>
+    /// Creates the entry over <paramref name="apiKey"/>, re-presenting the key whenever
+    /// <see cref="ApiKeyModel.HasKey"/> moves. Cancelling <paramref name="lifetime"/> abandons any
+    /// submission in flight before it can save.
+    /// </summary>
+    public ApiKeyEntryViewModel(ApiKeyModel apiKey, CancellationToken lifetime = default)
     {
         _apiKey = apiKey;
+        _lifetime = lifetime;
         apiKey.PropertyChanged += OnApiKeyChanged;
     }
 
@@ -74,6 +80,7 @@ public sealed class ApiKeyEntryViewModel : ObservableObject
     /// failure report, or null when the key was saved.
     /// </summary>
     /// <exception cref="InvalidOperationException"><see cref="CanSubmit"/> is false.</exception>
+    /// <exception cref="OperationCanceledException">The entry's lifetime ended before the save; nothing was stored.</exception>
     public async Task<ApiKeyFailureReport?> SubmitAsync(string key)
     {
         if (!CanSubmit)
@@ -86,7 +93,7 @@ public sealed class ApiKeyEntryViewModel : ObservableObject
         ApiKeySubmissionOutcome outcome;
         try
         {
-            outcome = await _apiKey.SubmitAsync(key);
+            outcome = await _apiKey.SubmitAsync(key, _lifetime);
         }
         finally
         {
@@ -109,13 +116,8 @@ public sealed class ApiKeyEntryViewModel : ObservableObject
         return report;
     }
 
-    /// <summary>Clears the draft state and any error, for an entry surface being opened again.</summary>
-    public void ResetDraft()
-    {
-        DraftHasText = false;
-        InlineError = null;
-        Raise(nameof(KeyDisplay));
-    }
+    /// <summary>Stops observing the key model.</summary>
+    public void Dispose() => _apiKey.PropertyChanged -= OnApiKeyChanged;
 
     private void OnApiKeyChanged(object? sender, PropertyChangedEventArgs e) => Raise(nameof(KeyDisplay));
 }

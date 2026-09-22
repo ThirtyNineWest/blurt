@@ -22,7 +22,10 @@ public partial class GeneralTab : UserControl
             return;
         }
 
-        model.Account.ResetDraft();
-        new ApiKeyEditorWindow(model.Account) { Owner = Window.GetWindow(this) }.ShowDialog();
+        var saved = new ApiKeyEditorWindow(model.ApiKey) { Owner = Window.GetWindow(this) }.ShowDialog();
+        if (saved == true)
+        {
+            model.RefreshKeyDisplay();
+        }
     }
 }

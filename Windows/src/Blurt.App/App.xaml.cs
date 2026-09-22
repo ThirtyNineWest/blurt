@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Threading;
 using Blurt.App.Cues;
 using Blurt.App.Main;
@@ -17,7 +16,6 @@ using Blurt.Engine.Pipeline;
 using Blurt.Engine.STT;
 using Blurt.Engine.Update;
 using Blurt.Engine.Windows.Config;
-using Blurt.Engine.Windows.FocusCapture;
 using Blurt.Engine.Windows.Permissions;
 
 namespace Blurt.App;
@@ -137,12 +135,12 @@ public partial class App : Application
         coordinator.PropertyChanged += OnCoordinatorPropertyChanged;
         coordinator.Start();
 
+        OwnWindowFocusExclusion.Install(components.Focus);
         var dictation = new DictationSettingsViewModel(settings, coordinator);
         var styles = new StylesViewModel(settings);
         var wizard = new WizardViewModel(coordinator, permissions, dictation);
         var mainWindow = new MainWindow(wizard, new ReadyViewModel(coordinator, dictation, styles));
         _mainWindow = mainWindow;
-        IgnoreForFocus(mainWindow, components.Focus);
         mainWindow.Closing += OnMainWindowClosing;
         mainWindow.SettingsRequested += ShowSettings;
 
@@ -157,7 +155,6 @@ public partial class App : Application
             new InstallReset(settings.Store, apiKey, log),
             RestartAfterReset);
         _settingsWindow = settingsWindow;
-        IgnoreForFocus(settingsWindow, components.Focus);
 
         var tray = new TrayIcon(settings.TriggerKey);
         _tray = tray;
@@ -170,13 +167,6 @@ public partial class App : Application
         mainWindow.Show();
 
         Observe(updates.CheckAtLaunchAsync(() => SetupReadiness.IsReady(permissions.Check(), apiKey.HasKey)), "launch update check");
-    }
-
-    private static void IgnoreForFocus(Window window, UiaFocusCapture focus)
-    {
-        var handle = new WindowInteropHelper(window).EnsureHandle();
-        focus.IgnoreWindow(handle);
-        window.Closed += (_, _) => focus.ForgetWindow(handle);
     }
 
     private void ShowSettings(bool advanced) => _settingsWindow?.Present(advanced);

@@ -62,6 +62,10 @@ public partial class ApiKeyStep : UserControl
                     break;
             }
         }
+        catch (OperationCanceledException)
+        {
+            // A cancelled submission stored nothing, and its editor is already closing.
+        }
         catch (Exception failure)
         {
             BlurtLog.Error(LogCategory, $"key submission failed: {failure.GetType().Name}: {failure.Message}");

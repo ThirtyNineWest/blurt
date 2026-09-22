@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Globalization;
-using Blurt.App.Main;
 using Blurt.App.Services;
 using Blurt.App.Update;
 using Blurt.Engine.Config;
@@ -30,7 +29,8 @@ public sealed class SettingsViewModel : ObservableObject
         _developerMode = settings.DeveloperMode;
         _lastUpdateCheck = settings.LastUpdateCheck;
         Dictation = dictation;
-        Account = new ApiKeyEntryViewModel(apiKey);
+        ApiKey = apiKey;
+        apiKey.PropertyChanged += OnApiKeyChanged;
         Styles = styles;
         Updates = updates;
         DictationsPath = log.DictationsPath;
@@ -38,8 +38,11 @@ public sealed class SettingsViewModel : ObservableObject
         updates.PropertyChanged += OnUpdatesChanged;
     }
 
-    /// <summary>The account row and its key editor.</summary>
-    public ApiKeyEntryViewModel Account { get; }
+    /// <summary>The API key surface the account row presents and its editor submits to.</summary>
+    public ApiKeyModel ApiKey { get; }
+
+    /// <summary>How the stored key is presented in the account row.</summary>
+    public ApiKeyDisplay KeyDisplay => ApiKeyDisplay.Resolve(ApiKey.Current);
 
     /// <summary>The trigger key, activation, and cue voice pickers.</summary>
     public DictationSettingsViewModel Dictation { get; }
@@ -82,6 +85,11 @@ public sealed class SettingsViewModel : ObservableObject
         Styles.Reload();
         Raise(nameof(LastCheckedCaption), nameof(DeveloperMode));
     }
+
+    /// <summary>Re-presents the stored key, for after the editor closed with a saved key.</summary>
+    public void RefreshKeyDisplay() => Raise(nameof(KeyDisplay));
+
+    private void OnApiKeyChanged(object? sender, PropertyChangedEventArgs e) => RefreshKeyDisplay();
 
     private void OnUpdatesChanged(object? sender, PropertyChangedEventArgs e)
     {

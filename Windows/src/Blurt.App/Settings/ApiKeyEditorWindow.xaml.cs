@@ -1,22 +1,28 @@
 using System.Windows;
 using Blurt.App.Main;
+using Blurt.App.Services;
 
 namespace Blurt.App.Settings;
 
 /// <summary>
-/// The modal key editor the Settings account row opens: the API key entry, closing itself once a
-/// submitted key is saved. Cancel closes it without saving; a validation still in flight then
-/// completes, and saves only a key AssemblyAI accepted.
+/// The modal key editor the Settings account row opens. Each opening gets its own entry view model,
+/// so a submission from an earlier opening can never close this one. Closing the window by any
+/// route cancels a submission in flight before it can save; the dialog result is true only when a
+/// key was validated and saved.
 /// </summary>
 public partial class ApiKeyEditorWindow : Window
 {
-    /// <summary>Creates the editor bound to <paramref name="entry"/>.</summary>
-    public ApiKeyEditorWindow(ApiKeyEntryViewModel entry)
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly ApiKeyEntryViewModel _entry;
+
+    /// <summary>Creates the editor over <paramref name="apiKey"/>.</summary>
+    public ApiKeyEditorWindow(ApiKeyModel apiKey)
     {
         InitializeComponent();
-        DataContext = entry;
-        entry.Saved += OnSaved;
-        Closed += (_, _) => entry.Saved -= OnSaved;
+        _entry = new ApiKeyEntryViewModel(apiKey, _lifetime.Token);
+        DataContext = _entry;
+        _entry.Saved += OnSaved;
+        Closed += OnClosed;
     }
 
     private void OnSaved()
@@ -25,5 +31,13 @@ public partial class ApiKeyEditorWindow : Window
         {
             DialogResult = true;
         }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _lifetime.Cancel();
+        _entry.Saved -= OnSaved;
+        _entry.Dispose();
+        _lifetime.Dispose();
     }
 }

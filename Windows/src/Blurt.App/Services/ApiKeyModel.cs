@@ -52,10 +52,14 @@ public sealed class ApiKeyModel : INotifyPropertyChanged
         return saved;
     }
 
-    /// <summary>Validates <paramref name="key"/> against AssemblyAI and saves it only when accepted.</summary>
-    public async Task<ApiKeySubmissionOutcome> SubmitAsync(string key)
+    /// <summary>
+    /// Validates <paramref name="key"/> against AssemblyAI and saves it only when accepted. A
+    /// cancellation of <paramref name="ct"/> before the save leaves the stored key untouched.
+    /// </summary>
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled before the save.</exception>
+    public async Task<ApiKeySubmissionOutcome> SubmitAsync(string key, CancellationToken ct = default)
     {
-        var outcome = await _submission.SubmitAsync(key);
+        var outcome = await _submission.SubmitAsync(key, ct);
         RefreshStatus();
         return outcome;
     }

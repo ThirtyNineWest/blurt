@@ -20,6 +20,42 @@ public sealed class ApiKeySubmissionTests
     }
 
     [Test]
+    public async Task ACancelAfterValidationButBeforeSaveLeavesTheStoredKeyUntouched()
+    {
+        var store = new InMemoryApiKeyStore();
+        store.Save("sk-old");
+        using var cancel = new CancellationTokenSource();
+        var submission = new ApiKeySubmission(store, _ =>
+        {
+            cancel.Cancel();
+            return Task.FromResult(ApiKeyValidationResult.Valid);
+        });
+
+        await FluentActions.Awaiting(() => submission.SubmitAsync("sk-new", cancel.Token))
+            .Should().ThrowAsync<OperationCanceledException>();
+
+        store.Current.Should().Be("sk-old");
+    }
+
+    [Test]
+    public async Task AnAlreadyCancelledSubmissionNeverValidates()
+    {
+        var store = new InMemoryApiKeyStore();
+        var validated = false;
+        var submission = new ApiKeySubmission(store, _ =>
+        {
+            validated = true;
+            return Task.FromResult(ApiKeyValidationResult.Valid);
+        });
+
+        await FluentActions.Awaiting(() => submission.SubmitAsync("sk-new", new CancellationToken(canceled: true)))
+            .Should().ThrowAsync<OperationCanceledException>();
+
+        validated.Should().BeFalse();
+        store.Current.Should().BeNull();
+    }
+
+    [Test]
     public async Task ARejectedKeyIsNeverPersisted()
     {
         var store = new InMemoryApiKeyStore();

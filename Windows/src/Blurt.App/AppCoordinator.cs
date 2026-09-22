@@ -30,7 +30,6 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private DictationKeyHook? _keyHook;
     private OverlayWindow? _overlay;
-    private nint _overlayHandle;
     private Task _levelsObserver = Task.CompletedTask;
     private PipelinePhase _phase = PipelinePhase.Idle;
     private TrayStatus _trayStatus = TrayStatus.Idle;
@@ -141,9 +140,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         if (_overlay is null)
         {
             _overlay = new OverlayWindow(_settings.OverlayOrigin);
-            _overlayHandle = _overlay.EnsureHandle();
-            _components.Focus.IgnoreWindow(_overlayHandle);
-            _overlay.Closed += (_, _) => _components.Focus.ForgetWindow(_overlayHandle);
+            _overlay.EnsureHandle();
         }
 
         _cues.Prime();

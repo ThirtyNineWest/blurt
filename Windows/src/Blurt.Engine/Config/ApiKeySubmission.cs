@@ -64,10 +64,15 @@ public sealed class ApiKeySubmission(IApiKeyGateway keyStore, Func<string, Task<
     /// <summary>
     /// Verifies <paramref name="key"/> against AssemblyAI and saves it only when AssemblyAI actively
     /// accepts it. On an invalid or unreachable outcome the stored key is left untouched.
+    /// <paramref name="ct"/> is checked after validation and before the save, so a cancelled
+    /// submission never persists.
     /// </summary>
-    public async Task<ApiKeySubmissionOutcome> SubmitAsync(string key)
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled before the save.</exception>
+    public async Task<ApiKeySubmissionOutcome> SubmitAsync(string key, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var result = await validate(key).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
         return result switch
         {
             ApiKeyValidationResult.Valid => Save(key) ? ApiKeySubmissionOutcome.Valid : ApiKeySubmissionOutcome.SaveFailed,
