@@ -71,6 +71,12 @@ public sealed class RecentDictations
         public const double JustNowThresholdSeconds = 60;
 
         /// <summary>
+        /// How often a view re-renders <see cref="RelativeLabel"/>: half the "just now" threshold, so a
+        /// shown label lags the true one by at most half a threshold.
+        /// </summary>
+        public static TimeSpan LabelRefreshInterval { get; } = TimeSpan.FromSeconds(JustNowThresholdSeconds / 2);
+
+        /// <summary>
         /// Returns "just now" when less than <see cref="JustNowThresholdSeconds"/> has elapsed (including
         /// a timestamp slightly in the future), otherwise the largest whole unit of minutes, hours, or
         /// days, e.g. "1 minute ago" or "3 days ago".
