@@ -8,7 +8,7 @@ namespace Blurt.Engine.STT;
 /// <see cref="AudioPartHeader"/>, the raw PCM frames, then <see cref="ClosingBoundary"/>. The
 /// streaming route rejects a body whose audio part precedes its config part.
 /// </summary>
-internal static class DictationMultipart
+public static class DictationMultipart
 {
     /// <summary>
     /// The whole <c>config</c> part that opens the body: its boundary, part headers, the JSON

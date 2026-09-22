@@ -44,19 +44,23 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
     private readonly Uri _baseUrl;
     private readonly Func<bool> _enhancedTranscripts;
     private readonly Func<string?> _customStyle;
+    private readonly TimeSpan _idleTimeout;
 
     /// <summary>
     /// Creates a transcriber. <paramref name="enhancedTranscripts"/> (default true) and
     /// <paramref name="customStyle"/> (default none) are read at every request, so a settings
     /// change applies to the next dictation. <paramref name="baseUrl"/> defaults to
-    /// <c>https://dictation.assemblyai.com</c>.
+    /// <c>https://dictation.assemblyai.com</c>. <paramref name="idleTimeout"/> is the no-progress
+    /// bound applied to each request, <see cref="RequestTimeout"/> by default.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="idleTimeout"/> is not positive.</exception>
     public AssemblyAITranscriber(
         Func<string?> apiKeyProvider,
         IHttpTransport transport,
         Uri? baseUrl = null,
         Func<bool>? enhancedTranscripts = null,
-        Func<string?>? customStyle = null)
+        Func<string?>? customStyle = null,
+        TimeSpan? idleTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(apiKeyProvider);
         ArgumentNullException.ThrowIfNull(transport);
@@ -65,16 +69,15 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
         _baseUrl = baseUrl ?? s_defaultBaseUrl;
         _enhancedTranscripts = enhancedTranscripts ?? (static () => true);
         _customStyle = customStyle ?? (static () => null);
+        _idleTimeout = idleTimeout ?? RequestTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_idleTimeout, TimeSpan.Zero, nameof(idleTimeout));
     }
-
-    /// <summary>The no-progress bound applied to each request. <see cref="RequestTimeout"/> unless a test shortens it.</summary>
-    internal TimeSpan IdleTimeout { get; set; } = RequestTimeout;
 
     /// <inheritdoc/>
     /// <exception cref="BlurtException">No API key is configured (<see cref="BlurtError.ApiKeyMissing"/>). Thrown before any request.</exception>
     /// <exception cref="AudioTooShortException">The feed ended below <see cref="SyncSTTLimits.MinPcmBytes"/>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
-    /// <exception cref="TimeoutException">The request made no progress for <see cref="RequestTimeout"/>, or the transport timed out.</exception>
+    /// <exception cref="TimeoutException">The request made no progress for its idle timeout, or the transport timed out.</exception>
     /// <exception cref="AssemblyAIError">The API answered non-2xx, or a 2xx body carried no transcript.</exception>
     /// <exception cref="HttpRequestException">The transport failed.</exception>
     public async Task<string> TranscribeAsync(
@@ -94,7 +97,7 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
             KeytermsBoost.Fitted(context?.KeyTerms ?? []),
             CleanupInstructionFor(_customStyle()));
         var boundary = $"blurt-{Guid.NewGuid():D}";
-        var idleTimeout = IdleTimeout;
+        var idleTimeout = _idleTimeout;
         using var idle = CancellationTokenSource.CreateLinkedTokenSource(ct);
         idle.CancelAfter(idleTimeout);
         var progress = new UploadProgress();
@@ -145,7 +148,7 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
     /// <paramref name="keytermsPrompt"/> is non-empty, and <c>llm_instruction</c> only when
     /// <paramref name="llmInstruction"/> is non-null.
     /// </summary>
-    internal static byte[] MakeConfigData(int sampleRate, string sttPrompt, IReadOnlyList<string> keytermsPrompt, string? llmInstruction) =>
+    public static byte[] MakeConfigData(int sampleRate, string sttPrompt, IReadOnlyList<string> keytermsPrompt, string? llmInstruction) =>
         new DictationConfig(sampleRate, SyncSTTLimits.ChannelCount, sttPrompt, keytermsPrompt, llmInstruction).Encode();
 
     /// <summary>
@@ -154,7 +157,7 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
     /// characters (so a proxy's HTML error page is still diagnosable). Returns null for an empty,
     /// blank, or non-UTF-8 body.
     /// </summary>
-    internal static string? ErrorMessage(byte[] body)
+    public static string? ErrorMessage(byte[] body)
     {
         ArgumentNullException.ThrowIfNull(body);
         if (DictationErrorResponse.Message(body) is { } message)
@@ -187,7 +190,7 @@ public sealed partial class AssemblyAITranscriber : ITranscriber
     /// <c>text</c>: the rewrite is best-effort, and a blank one would drop the utterance with
     /// nothing pasted.
     /// </summary>
-    internal static string Transcript(DictationResponse response, bool enhanced)
+    private static string Transcript(DictationResponse response, bool enhanced)
     {
         ArgumentNullException.ThrowIfNull(response);
         if (!enhanced)

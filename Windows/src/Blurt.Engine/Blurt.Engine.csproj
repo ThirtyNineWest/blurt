@@ -4,8 +4,4 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Blurt.Engine.Tests" />
-  </ItemGroup>
-
 </Project>

@@ -118,8 +118,7 @@ public sealed class ChunkedUploadTests
     {
         var transport = Answering("""{"text":"ok"}""");
         transport.Hold = new TaskCompletionSource();
-        var transcriber = MakeTranscriber("k", transport);
-        transcriber.IdleTimeout = TimeSpan.FromMilliseconds(200);
+        var transcriber = new AssemblyAITranscriber(() => "k", transport, idleTimeout: TimeSpan.FromMilliseconds(200));
 
         await FluentActions.Awaiting(() => CollectTranscript(transcriber).WaitAsync(Wait)).Should().ThrowAsync<TimeoutException>();
     }
@@ -128,8 +127,7 @@ public sealed class ChunkedUploadTests
     public async Task FramesStillArrivingKeepTheRequestAlivePastTheIdleTimeout()
     {
         var transport = Answering("""{"text":"ok"}""");
-        var transcriber = MakeTranscriber("k", transport);
-        transcriber.IdleTimeout = TimeSpan.FromMilliseconds(300);
+        var transcriber = new AssemblyAITranscriber(() => "k", transport, idleTimeout: TimeSpan.FromMilliseconds(300));
 
         var result = await transcriber.TranscribeAsync(SlowFeed(8, TimeSpan.FromMilliseconds(100)), 16_000, null, default).WaitAsync(Wait);
 
@@ -140,8 +138,7 @@ public sealed class ChunkedUploadTests
     public async Task ARealHttpClientUploadsChunkedHttp11WithoutAContentLength()
     {
         await using var server = new LoopbackServer("""{"text":"over the wire"}""");
-        using var client = new HttpClient();
-        var transcriber = new AssemblyAITranscriber(() => "k", new HttpClientTransport(client), server.BaseUrl, () => true, () => null);
+        var transcriber = new AssemblyAITranscriber(() => "k", new HttpClientTransport(), server.BaseUrl, () => true, () => null);
         var pcm = StubPcm.EveryByteValueAboveMinimum;
 
         var result = await transcriber.TranscribeAsync(OneShot(pcm[..100], pcm[100..]), 16_000, null, default).WaitAsync(Wait);
@@ -162,8 +159,7 @@ public sealed class ChunkedUploadTests
     public async Task ARealHttpClientSurfacesTheTooShortFloorUnwrapped()
     {
         await using var server = new LoopbackServer("""{"text":"never"}""");
-        using var client = new HttpClient();
-        var transcriber = new AssemblyAITranscriber(() => "k", new HttpClientTransport(client), server.BaseUrl, () => true, () => null);
+        var transcriber = new AssemblyAITranscriber(() => "k", new HttpClientTransport(), server.BaseUrl, () => true, () => null);
 
         await FluentActions.Awaiting(() => transcriber.TranscribeAsync(OneShot(new byte[8]), 16_000, null, default).WaitAsync(Wait))
             .Should().ThrowExactlyAsync<AudioTooShortException>();

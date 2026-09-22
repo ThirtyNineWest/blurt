@@ -9,7 +9,7 @@ public sealed class HttpClientTransportTests
     public async Task ForwardsTheRequestAndReturnsTheResponse()
     {
         var handler = new RecordingHandler();
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         var transport = new HttpClientTransport(client);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.invalid/v1");
 
@@ -17,6 +17,33 @@ public sealed class HttpClientTransportTests
 
         handler.Received.Should().BeSameAs(request);
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    [Test]
+    public void AClientWithTheDefaultTimeoutIsRejected()
+    {
+        using var client = new HttpClient();
+
+        FluentActions.Invoking(() => new HttpClientTransport(client))
+            .Should().Throw<ArgumentException>()
+            .WithParameterName("client")
+            .WithMessage("*HttpClient.Timeout*");
+    }
+
+    [Test]
+    public void AClientWithAnyFiniteTimeoutIsRejected()
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+
+        FluentActions.Invoking(() => new HttpClientTransport(client)).Should().Throw<ArgumentException>();
+    }
+
+    [Test]
+    public void TheParameterlessTransportHasAnInfiniteTimeout()
+    {
+        var transport = new HttpClientTransport();
+
+        transport.Client.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
