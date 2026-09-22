@@ -13,8 +13,8 @@ public sealed class ReadyReadoutTests
         var headline = ReadyReadout.Headline(TriggerKey.RightControl, TriggerActivation.TapOrHold);
 
         headline.Should().Be(new ReadoutSentence("Tap ", "Right Control (Ctrl)", " to start and stop."));
-        ReadyReadout.Headline(TriggerKey.RightAlt, TriggerActivation.Tap).ToString()
-            .Should().Be("Tap Right Alt to start and stop.");
+        ReadyReadout.Headline(TriggerKey.RightShift, TriggerActivation.Tap).ToString()
+            .Should().Be("Tap Right Shift to start and stop.");
     }
 
     [Test]

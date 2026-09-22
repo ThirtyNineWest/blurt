@@ -42,8 +42,9 @@ public static class MicrophoneAccess
     /// <summary>
     /// Maps the consent-store <c>Value</c> strings (null when absent) to an access state: any
     /// <c>"Deny"</c> is <see cref="MicrophoneAccessState.Denied"/>; <c>"Allow"</c> at every present
-    /// level is <see cref="MicrophoneAccessState.Granted"/>; nothing present, or any other value, is
-    /// <see cref="MicrophoneAccessState.Unknown"/>. Comparison ignores case.
+    /// level, or nothing present, is <see cref="MicrophoneAccessState.Granted"/>, since Windows treats
+    /// an absent consent value as Allow; any other value is <see cref="MicrophoneAccessState.Unknown"/>.
+    /// Comparison ignores case.
     /// </summary>
     public static MicrophoneAccessState Classify(string? machine, string? user, string? nonPackaged)
     {
@@ -53,7 +54,7 @@ public static class MicrophoneAccess
             return MicrophoneAccessState.Denied;
         }
 
-        if (present.Length > 0 && present.All(static v => string.Equals(v, "Allow", StringComparison.OrdinalIgnoreCase)))
+        if (present.All(static v => string.Equals(v, "Allow", StringComparison.OrdinalIgnoreCase)))
         {
             return MicrophoneAccessState.Granted;
         }

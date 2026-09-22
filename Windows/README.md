@@ -88,24 +88,21 @@ dictate into an elevated app.
 
 ## Trigger key
 
-The dictation trigger is a single modifier key, tapped or held. Four keys are offered (persisted
+The dictation trigger is a single modifier key, tapped or held. Two keys are offered (persisted
 as the Windows virtual-key code):
 
 | Key                  | Virtual-key code |
 | -------------------- | ---------------- |
 | Right Ctrl (default) | `0xA3`           |
-| Right Alt            | `0xA5`           |
 | Right Shift          | `0xA1`           |
-| Right Win            | `0x5C`           |
 
 Activation modes: **Tap or hold** (default) — a short press latches recording until pressed again,
 a press held past the hold threshold (1 s) records only while held; **Tap** — always latches;
 **Hold** — always push-to-talk.
 
-Right Alt needs one extra filter: on an AltGr keyboard layout, physical Right Alt also emits a
-synthetic Left Control down (a documented Windows quirk). The low-level keyboard hook recognizes
-that synthetic event by its scan code and discards it, so a Right-Alt-as-trigger press isn't read
-as a Ctrl+RightAlt combo and cancelled.
+Right Alt and Right Win are not offered because a lone tap has a system meaning on Windows (Right
+Win opens the Start menu, a lone Alt tap enters menu-bar mode in Win32 apps) and Blurt swallows no
+keystrokes.
 
 ## How the tree maps to the Swift engine
 

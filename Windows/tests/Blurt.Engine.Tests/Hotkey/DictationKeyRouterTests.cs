@@ -13,7 +13,7 @@ namespace Blurt.Engine.Tests.Hotkey;
 public sealed class DictationKeyRouterTests
 {
     private static readonly int Trigger = TriggerKey.RightControl.KeyCode();
-    private static readonly int OtherModifier = TriggerKey.RightAlt.KeyCode();
+    private static readonly int OtherModifier = TriggerKey.RightShift.KeyCode();
 
     private static DictationKeyRouter.Event DownEvent(int keyCode) => new DictationKeyRouter.Event.FlagsChanged(keyCode, true);
 

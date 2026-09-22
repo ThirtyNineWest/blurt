@@ -7,7 +7,8 @@ namespace Blurt.App.Services;
 
 /// <summary>
 /// Registers every WPF window this process shows with <see cref="UiaFocusCapture.IgnoreWindow"/>,
-/// so a dictation started while one of Blurt's own windows is in front never pastes into it. A class
+/// so none of Blurt's own windows is captured as the paste target and re-activated over the user's
+/// app. A dictation started with a Blurt text box focused still pastes there, as on macOS. A class
 /// handler on <see cref="FrameworkElement.LoadedEvent"/> covers windows created later; windows
 /// already open when <see cref="Install"/> runs are registered at once. Each window is forgotten when
 /// it closes. Use on the UI thread.

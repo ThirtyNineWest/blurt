@@ -32,11 +32,11 @@ public sealed class MicrophoneAccessTests
     }
 
     [Test]
-    public void NothingPresentIsUnknown()
+    public void NothingPresentIsGranted()
     {
         var state = MicrophoneAccess.Classify(null, null, null);
 
-        state.Should().Be(MicrophoneAccessState.Unknown);
+        state.Should().Be(MicrophoneAccessState.Granted);
     }
 
     [TestCase("Allow", "Prompt", null)]
