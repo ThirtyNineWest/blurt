@@ -31,6 +31,22 @@ public static class OverlayPlacement
         Origin(panelSize, visibleFrame, customOrigin, DefaultBottomClearance - shadowMargin);
 
     /// <summary>
+    /// <see cref="PanelOrigin"/> for a screen whose y axis grows downward (Win32, WPF): returns the
+    /// panel's top-left corner. <paramref name="workArea"/> and <paramref name="customTopLeft"/> are
+    /// in the same y-down space. The default placement keeps the pill's bottom edge
+    /// <see cref="DefaultBottomClearance"/> above the work area's bottom edge.
+    /// </summary>
+    public static Point PanelTopLeft(Size panelSize, Rect workArea, Point? customTopLeft, double shadowMargin)
+    {
+        // Mirroring y within the work area maps a y-down top edge onto a y-up bottom edge and back.
+        double Mirror(double y) => workArea.MinY + workArea.MaxY - (y + panelSize.Height);
+
+        Point? mirrored = customTopLeft is { } custom ? new Point(custom.X, Mirror(custom.Y)) : null;
+        var origin = PanelOrigin(panelSize, workArea, mirrored, shadowMargin);
+        return new Point(origin.X, Mirror(origin.Y));
+    }
+
+    /// <summary>
     /// Resolves the panel's origin: the user's dragged <paramref name="customOrigin"/> clamped
     /// fully back onto the current screen, or — when the pill has never been moved — the default
     /// placement, horizontally centered with its bottom edge <paramref name="bottomOffset"/> above

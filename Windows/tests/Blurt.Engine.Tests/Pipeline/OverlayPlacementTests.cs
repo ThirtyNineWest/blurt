@@ -132,4 +132,51 @@ public sealed class OverlayPlacementTests
 
         clamped.Should().Be(new Point(-100, -20));
     }
+
+    [Test]
+    public void TopLeftDefaultKeepsThePillTheClearanceAboveTheWorkAreaBottom()
+    {
+        const double margin = 28;
+
+        var topLeft = OverlayPlacement.PanelTopLeft(Panel, Screen, null, margin);
+
+        topLeft.Should().Be(new Point(400, 488));
+        (Screen.MaxY - (topLeft.Y + Panel.Height - margin)).Should().Be(OverlayPlacement.DefaultBottomClearance);
+    }
+
+    [Test]
+    public void TopLeftDefaultRespectsAnOffsetWorkArea()
+    {
+        var workArea = new Rect(1920, 40, 1600, 860);
+
+        var topLeft = OverlayPlacement.PanelTopLeft(Panel, workArea, null, 28);
+
+        topLeft.Should().Be(new Point(2620, 900 - 52 - 60));
+    }
+
+    [Test]
+    public void TopLeftUsesAnOnScreenCustomOriginAsIs()
+    {
+        var custom = new Point(300, 200);
+
+        var topLeft = OverlayPlacement.PanelTopLeft(Panel, Screen, custom, 28);
+
+        topLeft.Should().Be(custom);
+    }
+
+    [Test]
+    public void TopLeftClampsAStaleCustomOriginPastTheBottomRight()
+    {
+        var topLeft = OverlayPlacement.PanelTopLeft(Panel, Screen, new Point(5000, 5000), 28);
+
+        topLeft.Should().Be(new Point(800, 540));
+    }
+
+    [Test]
+    public void TopLeftClampsAStaleCustomOriginPastTheTopLeft()
+    {
+        var topLeft = OverlayPlacement.PanelTopLeft(Panel, Screen, new Point(-50, -70), 28);
+
+        topLeft.Should().Be(new Point(0, 0));
+    }
 }
