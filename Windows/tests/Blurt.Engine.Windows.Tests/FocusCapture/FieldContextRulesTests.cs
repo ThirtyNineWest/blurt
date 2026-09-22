@@ -93,4 +93,49 @@ public sealed class FieldContextRulesTests
         context.PriorText.Should().Be(new string('p', FocusCaptureRules.MaxPriorChars));
         context.SelectedText.Should().HaveLength(FocusCaptureRules.MaxSelectedChars);
     }
+
+    [Test]
+    public void AThrowReadingTheFocusedElementFailsClosed()
+    {
+        var captured = false;
+
+        var context = FieldContextRules.FromFocusedElement<string>(
+            () => throw new InvalidOperationException("unavailable"),
+            _ =>
+            {
+                captured = true;
+                return FocusedFieldContext.Empty;
+            });
+
+        context.Should().Be(FocusedFieldContext.Empty with { IsSecure = true });
+        captured.Should().BeFalse();
+    }
+
+    [Test]
+    public void NoFocusedElementIsEmptyAndNotSecure()
+    {
+        var captured = false;
+
+        var context = FieldContextRules.FromFocusedElement<string>(
+            () => null,
+            _ =>
+            {
+                captured = true;
+                return FocusedFieldContext.Empty;
+            });
+
+        context.Should().Be(FocusedFieldContext.Empty);
+        context.IsSecure.Should().BeFalse();
+        captured.Should().BeFalse();
+    }
+
+    [Test]
+    public void AFocusedElementIsHandedToTheCapture()
+    {
+        var expected = new FocusedFieldContext("Doc", "Body", "prior", null, IsSecure: false);
+
+        var context = FieldContextRules.FromFocusedElement(() => "element", element => element == "element" ? expected : FocusedFieldContext.Empty);
+
+        context.Should().Be(expected);
+    }
 }

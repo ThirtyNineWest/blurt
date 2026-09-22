@@ -1,3 +1,4 @@
+using Blurt.Engine.Diagnostics;
 using Blurt.Engine.FocusCapture;
 
 namespace Blurt.Engine.Windows.FocusCapture;
@@ -5,6 +6,33 @@ namespace Blurt.Engine.Windows.FocusCapture;
 /// <summary>Assembles a <see cref="FocusedFieldContext"/> from the reads taken off the focused element.</summary>
 public static class FieldContextRules
 {
+    /// <summary>
+    /// Reads the focused element and builds its context with <paramref name="capture"/>. Returns
+    /// <see cref="FocusedFieldContext.Empty"/> when <paramref name="focusedElement"/> returns null, and
+    /// <see cref="FocusedFieldContext.Empty"/> marked secure when it throws, since the element's role is then unknown.
+    /// </summary>
+    public static FocusedFieldContext FromFocusedElement<TElement>(
+        Func<TElement?> focusedElement,
+        Func<TElement, FocusedFieldContext> capture)
+        where TElement : class
+    {
+        ArgumentNullException.ThrowIfNull(focusedElement);
+        ArgumentNullException.ThrowIfNull(capture);
+
+        TElement? element;
+        try
+        {
+            element = focusedElement();
+        }
+        catch (Exception exception)
+        {
+            BlurtLog.Info("FocusCapture", $"focused element unreadable: {exception.GetType().Name}");
+            return FocusedFieldContext.Empty with { IsSecure = true };
+        }
+
+        return element is null ? FocusedFieldContext.Empty : capture(element);
+    }
+
     /// <summary>
     /// Builds the context. <paramref name="isPassword"/> is null when the element's role or password flag could not
     /// be read, which returns <see cref="FocusedFieldContext.Empty"/> marked secure and invokes no reader. A password

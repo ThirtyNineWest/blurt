@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Automation;
@@ -16,18 +17,30 @@ public sealed class UiaFocusCapture : IFocusCapture
 {
     private const string LogCategory = "FocusCapture";
 
-    /// <summary>A window of this app that <see cref="CaptureForeground"/> never returns as the target.</summary>
-    public nint? IgnoredWindow { get; set; }
+    private ImmutableHashSet<nint> _ignoredWindows = [];
+
+    /// <summary>Registers a window of this app that <see cref="CaptureForeground"/> never returns. Thread-safe.</summary>
+    public void IgnoreWindow(nint handle) => ImmutableInterlocked.Update(ref _ignoredWindows, static (set, h) => set.Add(h), handle);
+
+    /// <summary>Removes a window registered with <see cref="IgnoreWindow"/>. Thread-safe.</summary>
+    public void ForgetWindow(nint handle) => ImmutableInterlocked.Update(ref _ignoredWindows, static (set, h) => set.Remove(h), handle);
+
+    /// <summary>Returns whether <paramref name="foreground"/> is zero or one of the <paramref name="ignored"/> windows.</summary>
+    public static bool IsOwnWindow(nint foreground, IReadOnlySet<nint> ignored)
+    {
+        ArgumentNullException.ThrowIfNull(ignored);
+        return foreground == 0 || ignored.Contains(foreground);
+    }
 
     /// <summary>
     /// Returns the foreground window with its process id, name, and executable path, or null when there is no
-    /// foreground window, it is <see cref="IgnoredWindow"/>, or its process id is unreadable. The name and path are
+    /// foreground window, it is a window registered with <see cref="IgnoreWindow"/>, or its process id is unreadable. The name and path are
     /// null when the process has exited or denies access.
     /// </summary>
     public FocusTarget? CaptureForeground()
     {
         var window = User32Window.GetForegroundWindow();
-        if (window == 0 || window == IgnoredWindow)
+        if (IsOwnWindow(window, Volatile.Read(ref _ignoredWindows)))
         {
             return null;
         }
@@ -57,17 +70,14 @@ public sealed class UiaFocusCapture : IFocusCapture
     /// <summary>
     /// Returns the focused field's window title, label, prior text, and selection. Returns
     /// <see cref="FocusedFieldContext.Empty"/> when no element is focused, and <see cref="FocusedFieldContext.Empty"/>
-    /// marked secure when the element's role or password flag cannot be read. Never reads the contents of a password
+    /// marked secure when the focused element, its role, or its password flag cannot be read. Never reads the contents of a password
     /// field or of an element owned by a process other than the foreground window's.
     /// </summary>
-    public FocusedFieldContext CaptureFieldContext()
-    {
-        var element = FocusedElement();
-        if (element is null)
-        {
-            return FocusedFieldContext.Empty;
-        }
+    public FocusedFieldContext CaptureFieldContext() =>
+        FieldContextRules.FromFocusedElement(static () => AutomationElement.FocusedElement, CaptureFrom);
 
+    private static FocusedFieldContext CaptureFrom(AutomationElement element)
+    {
         var isPassword = Read(() =>
         {
             _ = element.Current.ControlType;
