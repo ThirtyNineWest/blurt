@@ -12,13 +12,24 @@ public sealed class LastUpdateCheckStore(ISettingsStore store)
     /// <summary>The settings key holding the stamp, an ISO 8601 string.</summary>
     public static string SettingsKey => DefaultsKey.LastUpdateCheck.Key();
 
-    /// <summary>When a check last produced a result, or null if none ever has.</summary>
+    /// <summary>
+    /// When a check last produced a result, or null if none ever has — including when the stored
+    /// stamp is malformed, so a corrupt value on this launch-path getter reads as "never checked"
+    /// rather than throwing.
+    /// </summary>
     public DateTimeOffset? LastCheck
     {
         get
         {
             var raw = store.GetString(SettingsKey);
-            return raw is null ? null : DateTimeOffset.Parse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            if (raw is null)
+            {
+                return null;
+            }
+
+            return DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                ? parsed
+                : null;
         }
 
         set

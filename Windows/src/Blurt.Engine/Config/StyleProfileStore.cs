@@ -50,6 +50,18 @@ public sealed record StyleProfile
 /// </summary>
 public sealed class StyleProfileStore(ISettingsStore store, int characterLimit)
 {
+    /// <summary>
+    /// Rejects a stored profile that is missing a field (<c>RespectRequiredConstructorParameters</c>:
+    /// none of <see cref="StyleProfile"/>'s constructor parameters carry a C# default) or carries an
+    /// explicit JSON <c>null</c> for one (<c>RespectNullableAnnotations</c>), rather than silently
+    /// binding <see langword="null"/> or <see cref="Guid.Empty"/> and failing later downstream.
+    /// </summary>
+    private static readonly JsonSerializerOptions DecodeOptions = new()
+    {
+        RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
+    };
+
     /// <summary>The settings key holding the JSON-encoded profile list.</summary>
     public static string SettingsKey => DefaultsKey.StyleProfiles.Key();
 
@@ -115,8 +127,9 @@ public sealed class StyleProfileStore(ISettingsStore store, int characterLimit)
     /// <summary>
     /// The profiles behind a raw slot value that has already been observed: the decode, the caps, and
     /// the pre-profiles fallback. An empty <paramref name="raw"/> means "no list stored", which defers
-    /// to the legacy field; a stored value that won't decode reads as no profiles rather than reviving
-    /// the legacy text.
+    /// to the legacy field; a stored value that won't decode — malformed JSON, a null element, or a
+    /// profile missing or nulling a field — reads as no profiles rather than reviving the legacy text
+    /// or throwing on a corrupt slot the app's launch path reads through <see cref="ActiveInstructions"/>.
     /// </summary>
     public IReadOnlyList<StyleProfile> Decode(string raw)
     {
@@ -125,17 +138,22 @@ public sealed class StyleProfileStore(ISettingsStore store, int characterLimit)
             return LegacyProfiles();
         }
 
-        List<StyleProfile>? decoded;
+        List<StyleProfile?>? decoded;
         try
         {
-            decoded = JsonSerializer.Deserialize<List<StyleProfile>>(raw);
+            decoded = JsonSerializer.Deserialize<List<StyleProfile?>>(raw, DecodeOptions);
         }
         catch (JsonException)
         {
             return [];
         }
 
-        return decoded is null ? [] : Normalized(decoded, CharacterLimit);
+        if (decoded is null || decoded.Any(profile => profile is null))
+        {
+            return [];
+        }
+
+        return Normalized(decoded.Select(profile => profile!), CharacterLimit);
     }
 
     /// <summary>

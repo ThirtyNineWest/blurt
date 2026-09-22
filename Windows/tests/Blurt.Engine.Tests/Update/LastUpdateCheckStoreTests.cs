@@ -62,4 +62,21 @@ public sealed class LastUpdateCheckStoreTests
     {
         LastUpdateCheckStore.SettingsKey.Should().Be(DefaultsKey.LastUpdateCheck.Key());
     }
+
+    /// <summary>
+    /// This getter sits on the app's launch path, so a corrupt stamp — a hand-edited or truncated
+    /// settings file — must read as never-checked rather than throwing <see cref="FormatException"/>
+    /// out of a launch-time read.
+    /// </summary>
+    [TestCase("not a date")]
+    [TestCase("")]
+    [TestCase("2026-13-40")]
+    public void AMalformedStampReadsAsNeverCheckedRatherThanThrowing(string stored)
+    {
+        var settings = new InMemorySettingsStore();
+        settings.Set(LastUpdateCheckStore.SettingsKey, stored);
+        var store = new LastUpdateCheckStore(settings);
+
+        store.LastCheck.Should().BeNull();
+    }
 }

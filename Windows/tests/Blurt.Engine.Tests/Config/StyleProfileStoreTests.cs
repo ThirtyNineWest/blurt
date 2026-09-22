@@ -233,6 +233,27 @@ public sealed class StyleProfileStoreTests
         new StyleProfileStore(settings, CharacterLimit).Profiles.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// A profile missing a required field, an explicit JSON null for one, or a null array element all
+    /// leave the stored list well-formed enough to decode as an object graph but not as a valid
+    /// <see cref="StyleProfile"/>. Each must read as no profiles rather than throwing — this getter
+    /// sits behind <see cref="StyleProfileStore.ActiveInstructions"/>, which the app reads on every
+    /// dictation.
+    /// </summary>
+    [TestCase("[{\"Id\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"Name\":\"x\"}]")]
+    [TestCase("[null]")]
+    [TestCase("[{\"Id\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"Name\":null,\"Instructions\":\"x\"}]")]
+    [TestCase("[{\"Name\":\"x\",\"Instructions\":\"y\"}]")]
+    public void AMalformedProfileReadsAsNoProfilesRatherThanThrowing(string raw)
+    {
+        var settings = new InMemorySettingsStore();
+        settings.Set(StyleProfileStore.SettingsKey, raw);
+        var store = new StyleProfileStore(settings, CharacterLimit);
+
+        store.Profiles.Should().BeEmpty();
+        store.ActiveInstructions.Should().BeNull();
+    }
+
     [Test]
     public void TheLegacyProfileIdIsDeterministicAndNeverCollidesWithARandomGuid()
     {
