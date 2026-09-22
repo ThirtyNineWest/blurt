@@ -33,6 +33,7 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private UpdateCheckModel? _updates;
     private bool _quitting;
+    private bool _composed;
 
     /// <inheritdoc/>
     protected override void OnStartup(StartupEventArgs e)
@@ -62,7 +63,17 @@ public partial class App : Application
         SessionEnding += OnSessionEnding;
         BlurtLog.Info(LogCategory, $"starting {UpdateAlertContent.AppVersionLabel(UpdateCheckModel.AssemblyVersion())} as {identity.CredentialTarget}, data in {WindowsPaths.AppDataDirectory(identity)}");
 
-        Compose(identity);
+        try
+        {
+            Compose(identity);
+            _composed = true;
+        }
+        catch (Exception failure)
+        {
+            BlurtLog.Error(LogCategory, $"startup failed: {failure}");
+            Observe(TearDownAsync(), "startup-failure teardown");
+            Shutdown(1);
+        }
     }
 
     /// <inheritdoc/>
@@ -223,6 +234,15 @@ public partial class App : Application
     {
         BlurtLog.Error(LogCategory, $"unhandled UI exception: {e.Exception}");
         e.Handled = true;
+        if (_composed)
+        {
+            return;
+        }
+
+        // Before the shell exists there is no window or tray to recover into; staying alive would
+        // hold the instance mutex and make every relaunch exit silently.
+        Observe(TearDownAsync(), "startup-failure teardown");
+        Shutdown(1);
     }
 
     private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e) =>
