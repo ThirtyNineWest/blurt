@@ -192,7 +192,7 @@ public sealed class DictationSession : IAsyncDisposable
         Func<BlurtError?>? readinessCheck = null,
         Action<string, RecentDictations>? onTranscriptDelivered = null);
     public PipelinePhase Phase { get; }
-    public event Action<PipelinePhase>? PhaseChanged;      // raised on the session's command thread
+    public event Action<PipelinePhase>? PhaseChanged;      // raised in order from one dispatcher thread
     public IAsyncEnumerable<PipelinePhase> PhaseStream(CancellationToken ct); // current phase first
     public Task PressAsync(); public Task ReleaseAsync(); public Task CancelAsync(); public Task CancelRecordingAsync();
     public void Submit(Command command);                   // FIFO, non-blocking; Cancel preempts an in-flight press
