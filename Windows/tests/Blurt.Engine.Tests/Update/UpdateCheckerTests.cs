@@ -141,6 +141,17 @@ public sealed class UpdateCheckerTests
         AssetMatching.IsWindowsDownload(assetName).Should().Be(expected);
     }
 
+    [Test]
+    public async Task SendsABlurtUserAgentWithTheReleaseRequest()
+    {
+        var transport = FakeTransport.Returning(ReleaseJson("v0.1.30", "Blurt-Setup.msi"));
+        var checker = new UpdateChecker(transport, new Uri("https://example.invalid/release"));
+
+        await checker.CheckAsync(CurrentVersion, CancellationToken.None);
+
+        transport.LastUserAgent.Should().StartWith("Blurt/");
+    }
+
     private static UpdateChecker Checker(byte[] body) =>
         new(FakeTransport.Returning(body), new Uri("https://example.invalid/release"));
 
@@ -188,7 +199,12 @@ public sealed class UpdateCheckerTests
         public static FakeTransport Failing(Exception exception) =>
             new(_ => throw exception);
 
-        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(_respond(request));
+        public string? LastUserAgent { get; private set; }
+
+        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            LastUserAgent = request.Headers.TryGetValues("User-Agent", out var values) ? string.Join(" ", values) : null;
+            return Task.FromResult(_respond(request));
+        }
     }
 }

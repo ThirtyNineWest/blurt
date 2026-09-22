@@ -45,7 +45,7 @@ public partial class App : Application
         HostIdentity.Configure(identity);
         base.OnStartup(e);
 
-        _instanceMutex = new Mutex(initiallyOwned: true, $@"Global\Blurt-{identity.Subsystem}", out var createdNew);
+        _instanceMutex = new Mutex(initiallyOwned: true, $@"Local\Blurt-{identity.Subsystem}-{identity.LogDirectoryName}", out var createdNew);
         if (!createdNew)
         {
             _instanceMutex.Dispose();
@@ -59,7 +59,7 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
-        SessionEnding += (_, _) => _quitting = true;
+        SessionEnding += OnSessionEnding;
         BlurtLog.Info(LogCategory, $"starting {UpdateAlertContent.AppVersionLabel(UpdateCheckModel.AssemblyVersion())} as {identity.CredentialTarget}, data in {WindowsPaths.AppDataDirectory(identity)}");
 
         Compose(identity);
@@ -183,16 +183,10 @@ public partial class App : Application
             return;
         }
 
-        _quitting = true;
         BlurtLog.Info(LogCategory, "quit requested");
-        _tray?.Dispose();
-        _tray = null;
         try
         {
-            if (_coordinator is { } coordinator)
-            {
-                await coordinator.DisposeAsync();
-            }
+            await TearDownAsync();
         }
         finally
         {
@@ -200,15 +194,36 @@ public partial class App : Application
         }
     }
 
-    private static void Observe(Task task, string operation) =>
-        task.ContinueWith(
-            faulted => BlurtLog.Error(LogCategory, $"{operation} failed: {faulted.Exception?.GetBaseException()}"),
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)
+    {
+        if (_quitting)
+        {
+            return;
+        }
 
-    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e) =>
+        BlurtLog.Info(LogCategory, $"session ending ({e.ReasonSessionEnding})");
+        Observe(TearDownAsync(), "session-end teardown");
+    }
+
+    private async Task TearDownAsync()
+    {
+        _quitting = true;
+        _tray?.Dispose();
+        _tray = null;
+        if (_coordinator is { } coordinator)
+        {
+            _coordinator = null;
+            await coordinator.DisposeAsync();
+        }
+    }
+
+    private static void Observe(Task task, string operation) => TaskObserver.Observe(task, LogCategory, operation);
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
         BlurtLog.Error(LogCategory, $"unhandled UI exception: {e.Exception}");
+        e.Handled = true;
+    }
 
     private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e) =>
         BlurtLog.Error(LogCategory, $"unhandled exception (terminating: {e.IsTerminating}): {e.ExceptionObject}");

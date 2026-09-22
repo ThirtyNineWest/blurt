@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Blurt.Engine.STT;
 
 namespace Blurt.Engine.Update;
 
@@ -68,6 +69,7 @@ public sealed class UpdateChecker
     public async Task<UpdateCheckResult> CheckAsync(SemanticVersion current, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _releaseUrl);
+        request.Headers.TryAddWithoutValidation(UserAgent.HeaderField, UserAgent.Current);
         using var response = await _transport.SendAsync(request, ct).ConfigureAwait(false);
         var body = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
 

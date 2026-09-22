@@ -116,7 +116,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         if (_permissions.Check().Microphone)
         {
             var mic = _components.Mic;
-            _ = Task.Run(mic.WarmUpAsync);
+            TaskObserver.Observe(Task.Run(mic.WarmUpAsync), LogCategory, "microphone warm-up");
         }
 
         var session = Session;
@@ -170,9 +170,11 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     /// <summary>Uninstalls the hook, stops the session and the observers, and closes the pill.</summary>
     public async ValueTask DisposeAsync()
     {
+        // The hook is uninstalled before the first await, so a caller that cannot wait for the
+        // returned task still leaves no keyboard hook behind.
         Session.PhaseChanged -= OnPhaseChanged;
-        await _lifetime.CancelAsync();
         _keyHook?.Dispose();
+        await _lifetime.CancelAsync();
         await Session.DisposeAsync();
         await _levelsObserver;
         _overlay?.Close();
