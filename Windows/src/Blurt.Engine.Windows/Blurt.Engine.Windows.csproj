@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Blurt.Engine.Windows.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Blurt.Engine\Blurt.Engine.csproj" />
   </ItemGroup>
 
