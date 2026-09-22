@@ -5,11 +5,13 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <AssemblyName>Blurt</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\Icons\idle.ico</ApplicationIcon>
     <!-- WFO0003 assumes WinForms owns DPI awareness; this app is WPF-hosted and sets
          PerMonitorV2 through the manifest, which the WinForms analyzer does not recognize. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
@@ -18,6 +20,19 @@
   <ItemGroup>
     <ProjectReference Include="..\Blurt.Engine\Blurt.Engine.csproj" />
     <ProjectReference Include="..\Blurt.Engine.Windows\Blurt.Engine.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WinForms supplies only the tray icon; its implicit usings would shadow the WPF types. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The cue files live once, beside the macOS app, and are linked into the output. -->
+    <Content Include="..\..\..\App\Blurt\Blurt\Resources\Sounds\*.m4a" Link="Resources\Sounds\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Resources\soundpacks.json" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Resources\Icons\*.ico" LogicalName="Blurt.Icons.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
