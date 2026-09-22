@@ -20,7 +20,8 @@ public enum SetupStep
 /// The setup wizard's navigation: which step shows, when Continue is allowed, and whether the main
 /// window shows the ready view. The ready view shows only while setup is ready and the wizard has
 /// been completed; an install that is ready when the wizard is created counts as completed.
-/// Losing readiness reopens the wizard on the first requirement that is missing.
+/// Losing readiness shows the wizard on the first requirement that is missing; a completed wizard
+/// returns to the ready view as soon as setup is ready again.
 /// </summary>
 public sealed class SetupWizard
 {
@@ -94,20 +95,18 @@ public sealed class SetupWizard
         return true;
     }
 
-    /// <summary>Shows <paramref name="step"/> and reopens the wizard.</summary>
+    /// <summary>Moves the wizard to <paramref name="step"/>, which shows whenever setup is not ready.</summary>
     public void Show(SetupStep step)
     {
         Step = step;
-        IsCompleted = false;
     }
 
     /// <summary>
-    /// Reopens the wizard after setup stopped being ready, on the first missing requirement: the API
+    /// Moves the wizard to the first requirement missing after setup stopped being ready: the API
     /// key, then the microphone. With neither missing the step is left as it was.
     /// </summary>
     public void ReadinessLost(PermissionStatus permissions, bool hasApiKey)
     {
-        IsCompleted = false;
         if (!hasApiKey)
         {
             Step = SetupStep.ApiKey;

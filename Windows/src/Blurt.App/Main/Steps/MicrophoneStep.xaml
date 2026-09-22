@@ -1,0 +1,44 @@
+<UserControl x:Class="Blurt.App.Main.Steps.MicrophoneStep"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Blurt.App.Services">
+  <StackPanel>
+    <TextBlock Style="{StaticResource SectionHeader}" Text="Microphone" />
+    <Border Style="{StaticResource Card}">
+      <StackPanel>
+        <DockPanel LastChildFill="False">
+          <TextBlock DockPanel.Dock="Left" Style="{StaticResource RowLabel}" Text="Microphone access" />
+          <TextBlock DockPanel.Dock="Right"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource Accent}"
+                     Text="✓ Granted"
+                     Visibility="{Binding MicrophoneGranted, Mode=OneWay, Converter={StaticResource Visible}}" />
+          <Button DockPanel.Dock="Right"
+                  Style="{StaticResource PrimaryButton}"
+                  Content="Open Privacy Settings"
+                  Click="OnOpenPrivacySettingsClick"
+                  Visibility="{Binding MicrophoneGranted, Mode=OneWay, Converter={x:Static svc:TrueToCollapsed.Instance}}" />
+        </DockPanel>
+
+        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+          <Button DockPanel.Dock="Left"
+                  Style="{StaticResource PlainButton}"
+                  Content="Test microphone"
+                  Click="OnTestMicrophoneClick"
+                  IsEnabled="{Binding IsTestingMicrophone, Mode=OneWay, Converter={x:Static svc:Inverted.Instance}}" />
+          <ProgressBar DockPanel.Dock="Left"
+                       Width="60"
+                       Height="6"
+                       Margin="12,0,0,0"
+                       IsIndeterminate="True"
+                       Visibility="{Binding IsTestingMicrophone, Mode=OneWay, Converter={StaticResource Visible}}" />
+        </DockPanel>
+        <TextBlock Margin="0,8,0,0"
+                   TextWrapping="Wrap"
+                   Text="{Binding MicrophoneTestResult, Mode=OneWay}"
+                   Visibility="{Binding MicrophoneTestResult, Mode=OneWay, Converter={x:Static svc:NullToCollapsed.Instance}}" />
+      </StackPanel>
+    </Border>
+    <TextBlock Style="{StaticResource Footer}" Text="{Binding MicrophoneFooter, Mode=OneWay}" />
+  </StackPanel>
+</UserControl>

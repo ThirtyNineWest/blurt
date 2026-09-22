@@ -1,0 +1,45 @@
+<UserControl x:Class="Blurt.App.Main.Steps.ShortcutStep"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel>
+    <TextBlock Style="{StaticResource SectionHeader}" Text="Shortcut" />
+    <Border Style="{StaticResource Card}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource RowLabel}" Text="Dictation key" />
+        <ComboBox Grid.Row="0"
+                  Grid.Column="1"
+                  MinWidth="200"
+                  HorizontalAlignment="Right"
+                  IsSynchronizedWithCurrentItem="False"
+                  AutomationProperties.Name="Dictation key"
+                  ItemsSource="{Binding TriggerKeyChoices, Mode=OneTime}"
+                  DisplayMemberPath="Label"
+                  SelectedValuePath="Value"
+                  SelectedValue="{Binding TriggerKey, Mode=TwoWay}" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,10,12,0" Style="{StaticResource RowLabel}" Text="Activation" />
+        <ComboBox Grid.Row="1"
+                  Grid.Column="1"
+                  MinWidth="200"
+                  Margin="0,10,0,0"
+                  HorizontalAlignment="Right"
+                  IsSynchronizedWithCurrentItem="False"
+                  AutomationProperties.Name="Activation"
+                  ItemsSource="{Binding ActivationChoices, Mode=OneTime}"
+                  DisplayMemberPath="Label"
+                  SelectedValuePath="Value"
+                  SelectedValue="{Binding Activation, Mode=TwoWay}" />
+      </Grid>
+    </Border>
+    <TextBlock Style="{StaticResource Footer}" Text="{Binding Guidance, Mode=OneWay}" />
+  </StackPanel>
+</UserControl>

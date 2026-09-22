@@ -1,0 +1,19 @@
+<Window x:Class="Blurt.App.Settings.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:settings="clr-namespace:Blurt.App.Settings"
+        Title="Blurt Settings"
+        Width="500"
+        Height="640"
+        MinHeight="360"
+        Background="White"
+        WindowStartupLocation="CenterScreen">
+  <TabControl x:Name="Tabs" Margin="8">
+    <TabItem x:Name="GeneralItem" Header="General">
+      <settings:GeneralTab />
+    </TabItem>
+    <TabItem x:Name="AdvancedItem" Header="Advanced">
+      <settings:AdvancedTab x:Name="Advanced" />
+    </TabItem>
+  </TabControl>
+</Window>

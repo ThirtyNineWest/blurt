@@ -105,31 +105,43 @@ public sealed class SetupWizardTests
     }
 
     [Test]
-    public void LosingTheKeyReopensTheWizardOnTheApiKeyStep()
+    public void LosingTheKeyShowsTheWizardOnTheApiKeyStep()
     {
         var wizard = new SetupWizard(isReady: true);
 
         wizard.ReadinessLost(Denied, hasApiKey: false);
 
-        wizard.IsCompleted.Should().BeFalse();
+        wizard.ShowsReadyView(isReady: false).Should().BeFalse();
         wizard.Step.Should().Be(SetupStep.ApiKey);
     }
 
     [Test]
-    public void LosingTheMicrophoneReopensTheWizardOnTheMicrophoneStep()
+    public void LosingTheMicrophoneShowsTheWizardOnTheMicrophoneStep()
     {
         var wizard = new SetupWizard(isReady: true);
 
         wizard.ReadinessLost(Denied, hasApiKey: true);
 
         wizard.Step.Should().Be(SetupStep.Microphone);
-        wizard.ShowsReadyView(isReady: true).Should().BeFalse();
+        wizard.ShowsReadyView(isReady: false).Should().BeFalse();
     }
 
     [Test]
-    public void ShowingAStepReopensTheWizardThere()
+    public void ACompletedWizardReturnsToTheReadyViewOnceSetupIsReadyAgain()
     {
         var wizard = new SetupWizard(isReady: true);
+        wizard.ReadinessLost(Denied, hasApiKey: true);
+
+        var showsReady = wizard.ShowsReadyView(isReady: true);
+
+        showsReady.Should().BeTrue();
+    }
+
+    [Test]
+    public void ShowingAStepMovesTheWizardThere()
+    {
+        var wizard = new SetupWizard(isReady: false);
+        wizard.Continue(Granted, hasApiKey: true);
 
         wizard.Show(SetupStep.ApiKey);
 

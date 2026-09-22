@@ -1,9 +1,12 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Blurt.App.Cues;
+using Blurt.App.Main;
 using Blurt.App.Services;
+using Blurt.App.Settings;
 using Blurt.App.Tray;
 using Blurt.App.Update;
 using Blurt.Engine;
@@ -14,6 +17,7 @@ using Blurt.Engine.Pipeline;
 using Blurt.Engine.STT;
 using Blurt.Engine.Update;
 using Blurt.Engine.Windows.Config;
+using Blurt.Engine.Windows.FocusCapture;
 using Blurt.Engine.Windows.Permissions;
 
 namespace Blurt.App;
@@ -31,9 +35,10 @@ public partial class App : Application
     private AppCoordinator? _coordinator;
     private TrayIcon? _tray;
     private MainWindow? _mainWindow;
-    private UpdateCheckModel? _updates;
+    private SettingsWindow? _settingsWindow;
     private bool _quitting;
     private bool _composed;
+    private bool _restartOnExit;
 
     /// <inheritdoc/>
     protected override void OnStartup(StartupEventArgs e)
@@ -94,6 +99,20 @@ public partial class App : Application
             _instanceMutex.Dispose();
         }
 
+        // The replacement starts only after the instance mutex is released; started earlier, it
+        // would find the mutex held and exit at once.
+        if (_restartOnExit && Environment.ProcessPath is { } path)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = false });
+            }
+            catch (Exception failure) when (failure is Win32Exception or InvalidOperationException)
+            {
+                Debug.WriteLine($"relaunch after reset failed: {failure.Message}");
+            }
+        }
+
         base.OnExit(e);
     }
 
@@ -115,41 +134,58 @@ public partial class App : Application
 
         var coordinator = new AppCoordinator(Dispatcher, components, settings, apiKey, log, permissions);
         _coordinator = coordinator;
+        coordinator.PropertyChanged += OnCoordinatorPropertyChanged;
+        coordinator.Start();
 
-        var mainWindow = new MainWindow(coordinator);
+        var dictation = new DictationSettingsViewModel(settings, coordinator);
+        var styles = new StylesViewModel(settings);
+        var wizard = new WizardViewModel(coordinator, permissions, dictation);
+        var mainWindow = new MainWindow(wizard, new ReadyViewModel(coordinator, dictation, styles));
         _mainWindow = mainWindow;
-        var mainHandle = new WindowInteropHelper(mainWindow).EnsureHandle();
-        components.Focus.IgnoreWindow(mainHandle);
-        mainWindow.Closed += (_, _) => components.Focus.ForgetWindow(mainHandle);
+        IgnoreForFocus(mainWindow, components.Focus);
         mainWindow.Closing += OnMainWindowClosing;
+        mainWindow.SettingsRequested += ShowSettings;
 
         var updates = new UpdateCheckModel(
             new UpdateChecker(transport),
             UpdateCheckModel.AssemblyVersion(),
             settings.LastUpdateCheck,
-            () => _mainWindow);
-        _updates = updates;
+            () => _settingsWindow is { IsActive: true } active ? active : (Window?)_mainWindow);
+
+        var settingsWindow = new SettingsWindow(
+            new SettingsViewModel(settings, dictation, styles, updates, log),
+            new InstallReset(settings.Store, apiKey, log),
+            RestartAfterReset);
+        _settingsWindow = settingsWindow;
+        IgnoreForFocus(settingsWindow, components.Focus);
 
         var tray = new TrayIcon(settings.TriggerKey);
         _tray = tray;
         tray.OpenRequested += ShowMainWindow;
-        tray.SettingsRequested += ShowMainWindow;
+        tray.SettingsRequested += () => ShowSettings(false);
         tray.CheckForUpdatesRequested += () => Observe(updates.CheckNowAsync(), "update check");
         tray.QuitRequested += () => Observe(QuitAsync(), "quit");
 
-        coordinator.PropertyChanged += OnCoordinatorPropertyChanged;
-        coordinator.SetupBlocked += ShowMainWindow;
-        coordinator.Start();
+        coordinator.SetupBlocked += mainWindow.ShowApiKeyStep;
         mainWindow.Show();
 
-        var ready = SetupReadiness.IsReady(permissions.Check(), apiKey.HasKey);
-        BlurtLog.Info(LogCategory, $"setup ready: {ready}");
-        if (ready)
-        {
-            coordinator.ShowOverlayArmed();
-        }
-
         Observe(updates.CheckAtLaunchAsync(() => SetupReadiness.IsReady(permissions.Check(), apiKey.HasKey)), "launch update check");
+    }
+
+    private static void IgnoreForFocus(Window window, UiaFocusCapture focus)
+    {
+        var handle = new WindowInteropHelper(window).EnsureHandle();
+        focus.IgnoreWindow(handle);
+        window.Closed += (_, _) => focus.ForgetWindow(handle);
+    }
+
+    private void ShowSettings(bool advanced) => _settingsWindow?.Present(advanced);
+
+    private void RestartAfterReset()
+    {
+        BlurtLog.Info(LogCategory, "restarting after reset");
+        _restartOnExit = true;
+        Observe(QuitAsync(), "restart");
     }
 
     private void OnCoordinatorPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -160,21 +196,7 @@ public partial class App : Application
         }
     }
 
-    private void ShowMainWindow()
-    {
-        if (_mainWindow is not { } window)
-        {
-            return;
-        }
-
-        if (window.WindowState == WindowState.Minimized)
-        {
-            window.WindowState = WindowState.Normal;
-        }
-
-        window.Show();
-        window.Activate();
-    }
+    private void ShowMainWindow() => _mainWindow?.BringForward();
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)
     {
@@ -219,6 +241,11 @@ public partial class App : Application
     private async Task TearDownAsync()
     {
         _quitting = true;
+        if (_settingsWindow is { } settingsWindow)
+        {
+            settingsWindow.AllowClose = true;
+        }
+
         _tray?.Dispose();
         _tray = null;
         if (_coordinator is { } coordinator)
