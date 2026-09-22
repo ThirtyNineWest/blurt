@@ -8,8 +8,14 @@ public sealed class MicLivenessTests
     [Test]
     public void TheFloorAndTimeoutMatchTheCaptureContract()
     {
-        MicLiveness.SilenceFloorDb.Should().Be(-50);
+        MicLiveness.SilenceFloorDb.Should().Be(-115);
         MicLiveness.Timeout.Should().Be(TimeSpan.FromSeconds(2.5));
+    }
+
+    [Test]
+    public void TheLivenessFloorSitsFarBelowTheMeterFloor()
+    {
+        MicLiveness.SilenceFloorDb.Should().BeLessThan(LevelMeter.FloorDb);
     }
 
     [Test]
@@ -25,36 +31,52 @@ public sealed class MicLivenessTests
     }
 
     [Test]
-    public void ASignalJustAboveTheFloorIsLive()
+    public void OneLeastSignificantBitInAShortPacketIsLive()
     {
-        var justAbove = Pcm.Constant(104, 1600);
+        var packet = Pcm.OneSampleIn(160, 1);
 
-        var live = MicLiveness.IsLive(justAbove);
+        var live = MicLiveness.IsLive(packet);
 
-        LevelMeter.DbFs(justAbove).Should().BeGreaterThan(MicLiveness.SilenceFloorDb);
+        LevelMeter.DbFs(packet).Should().BeApproximately(-112.3, 0.1);
         live.Should().BeTrue();
     }
 
     [Test]
-    public void ASignalJustBelowTheFloorIsNotLive()
+    public void OneLeastSignificantBitInALongPacketIsNotLive()
     {
-        var justBelow = Pcm.Constant(103, 1600);
+        var packet = Pcm.OneSampleIn(1600, -1);
 
-        var live = MicLiveness.IsLive(justBelow);
+        var live = MicLiveness.IsLive(packet);
 
-        LevelMeter.DbFs(justBelow).Should().BeLessThan(MicLiveness.SilenceFloorDb);
+        LevelMeter.DbFs(packet).Should().BeApproximately(-122.3, 0.1);
         live.Should().BeFalse();
+    }
+
+    [Test]
+    public void AQuietRoomNoiseFloorIsLive()
+    {
+        var quietRoom = Pcm.Constant(1, 1600);
+
+        var live = MicLiveness.IsLive(quietRoom);
+
+        LevelMeter.DbFs(quietRoom).Should().BeApproximately(-90.3, 0.1);
+        live.Should().BeTrue();
+    }
+
+    [Test]
+    public void ASignalBelowTheMeterFloorIsStillLive()
+    {
+        var belowMeter = Pcm.Sine(0.002);
+
+        var live = MicLiveness.IsLive(belowMeter);
+
+        LevelMeter.Normalized(LevelMeter.DbFs(belowMeter)).Should().Be(0);
+        live.Should().BeTrue();
     }
 
     [Test]
     public void ASpeechLevelSineIsLive()
     {
         MicLiveness.IsLive(Pcm.Sine(0.05)).Should().BeTrue();
-    }
-
-    [Test]
-    public void ASineQuieterThanTheFloorIsNotLive()
-    {
-        MicLiveness.IsLive(Pcm.Sine(0.002)).Should().BeFalse();
     }
 }

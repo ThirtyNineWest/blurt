@@ -25,11 +25,20 @@ public sealed class WasapiMicCaptureSmokeTests
     public void RestoreLog() => BlurtLog.Sink = _previousSink;
 
     [Test]
-    public void ProbeReportsAState()
+    public void TheConsentStoreProbeReportsAState()
     {
         var state = MicrophoneAccess.Probe();
 
         TestContext.Out.WriteLine($"MicrophoneAccess.Probe() = {state}");
+        state.Should().BeOneOf(Enum.GetValues<MicrophoneAccessState>());
+    }
+
+    [Test]
+    public void TheDeviceProbeReportsAState()
+    {
+        var state = MicrophoneAccess.ProbeDevice();
+
+        TestContext.Out.WriteLine($"MicrophoneAccess.ProbeDevice() = {state}");
         state.Should().BeOneOf(Enum.GetValues<MicrophoneAccessState>());
     }
 

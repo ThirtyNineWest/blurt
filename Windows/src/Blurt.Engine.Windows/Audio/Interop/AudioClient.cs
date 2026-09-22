@@ -5,7 +5,7 @@ namespace Blurt.Engine.Windows.Audio.Interop;
 
 /// <summary>Native <c>WAVEFORMATEX</c>: 18 bytes, packed on 2-byte boundaries.</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 2)]
-internal struct WaveFormatEx
+public struct WaveFormatEx
 {
     public ushort FormatTag;
     public ushort Channels;

@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 namespace Blurt.Engine.Windows.Audio;
 
 /// <summary>Loudness math over raw S16LE PCM, for the recording meter and the liveness gate.</summary>
-internal static class LevelMeter
+public static class LevelMeter
 {
     /// <summary>The dBFS reading at or below which the meter shows an empty bar.</summary>
     public const double FloorDb = -50;

@@ -34,7 +34,7 @@ public sealed class WasapiMicCapture : IMicCapture
     }
 
     /// <summary>Creates a capture whose liveness wait runs on <paramref name="time"/> for up to <paramref name="livenessTimeout"/>.</summary>
-    internal WasapiMicCapture(TimeProvider time, TimeSpan livenessTimeout)
+    public WasapiMicCapture(TimeProvider time, TimeSpan livenessTimeout)
     {
         _time = time;
         _livenessTimeout = livenessTimeout;
@@ -100,6 +100,8 @@ public sealed class WasapiMicCapture : IMicCapture
     }
 
     /// <summary>Stops the capture, waits for its thread to exit, and returns the bytes it produced; 0 when none is running.</summary>
+    /// <exception cref="MicCaptureException">The device failed after the capture was confirmed live,
+    /// so the recording is truncated. The frame feed completed with the same exception.</exception>
     public async Task<int> StopAsync()
     {
         var capture = Detach(null);
@@ -109,13 +111,19 @@ public sealed class WasapiMicCapture : IMicCapture
         }
 
         var bytes = await capture.StopAsync().ConfigureAwait(false);
+        if (capture.Failure is { } failure)
+        {
+            BlurtLog.Error(LogCategory, $"stop after capture failure: {failure.Message}");
+            throw failure;
+        }
+
         BlurtLog.Info(
             LogCategory,
             $"stop samples={bytes / SyncSTTLimits.BytesPerSample} durationMs={SyncSTTLimits.DurationMs(bytes)}");
         return bytes;
     }
 
-    /// <summary>Stops the capture and discards its audio.</summary>
+    /// <summary>Stops the capture and discards its audio, including any capture failure. Never throws a capture failure.</summary>
     public async Task CancelCaptureAsync()
     {
         var capture = Detach(null);
@@ -185,6 +193,7 @@ public sealed class WasapiMicCapture : IMicCapture
         private volatile bool _stopRequested;
         private long _bytesCaptured;
         private double _peakDbFs = double.NegativeInfinity;
+        private MicCaptureException? _failure;
 
         public Capture(TimeProvider time, ChannelWriter<float> levels)
         {
@@ -196,7 +205,11 @@ public sealed class WasapiMicCapture : IMicCapture
         /// <summary>Completes once a live packet arrives; faults with <see cref="MicCaptureException"/> or cancels when the capture ends first.</summary>
         public Task Live => _live.Task;
 
+        /// <summary>The feed of captured packets. Completes normally on stop, or with <see cref="Failure"/> when the device fails.</summary>
         public IAsyncEnumerable<byte[]> Frames => _frames.Reader.ReadAllAsync();
+
+        /// <summary>The failure that ended the capture thread, or null when it ended on request. Read after <see cref="StopAsync"/>.</summary>
+        public MicCaptureException? Failure => Volatile.Read(ref _failure);
 
         /// <summary>The loudest packet level seen before liveness was confirmed.</summary>
         public double PeakDbFs => Volatile.Read(ref _peakDbFs);
@@ -232,7 +245,7 @@ public sealed class WasapiMicCapture : IMicCapture
                 var hr = Open(out client, out captureClient);
                 if (hr < 0)
                 {
-                    _live.TrySetException(MicCaptureException.FromHResult(hr));
+                    Fail(MicCaptureException.FromHResult(hr));
                     return;
                 }
 
@@ -242,13 +255,13 @@ public sealed class WasapiMicCapture : IMicCapture
             catch (Exception e)
             {
                 BlurtLog.Error(LogCategory, $"capture thread failed: {e.Message}");
-                _live.TrySetException(e is COMException com ? MicCaptureException.FromHResult(com.HResult) : e);
+                Fail(e as MicCaptureException ?? MicCaptureException.FromHResult(e.HResult));
             }
             finally
             {
                 CaptureEndpoint.Release(captureClient);
                 CaptureEndpoint.Release(client);
-                _frames.Writer.TryComplete();
+                _frames.Writer.TryComplete(Failure);
                 _live.TrySetCanceled();
                 if (coInit >= 0)
                 {
@@ -380,7 +393,17 @@ public sealed class WasapiMicCapture : IMicCapture
         private void EndOnFailure(string call, int hr)
         {
             BlurtLog.Error(LogCategory, $"{call} failed: 0x{hr:X8}");
-            _live.TrySetException(MicCaptureException.FromHResult(hr));
+            Fail(MicCaptureException.FromHResult(hr));
+        }
+
+        /// <summary>
+        /// Records the first failure, which fails a pending liveness wait, completes the frame feed
+        /// with it, and makes the owner's stop rethrow it.
+        /// </summary>
+        private void Fail(MicCaptureException failure)
+        {
+            Interlocked.CompareExchange(ref _failure, failure, null);
+            _live.TrySetException(failure);
         }
     }
 }

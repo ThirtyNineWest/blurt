@@ -18,6 +18,14 @@ internal static class Pcm
         return bytes;
     }
 
+    /// <summary>Digital silence of <paramref name="samples"/> samples with a single sample of <paramref name="value"/> at the start.</summary>
+    public static byte[] OneSampleIn(int samples, short value)
+    {
+        var bytes = new byte[samples * 2];
+        BinaryPrimitives.WriteInt16LittleEndian(bytes, value);
+        return bytes;
+    }
+
     /// <summary>A 440 Hz sine at <paramref name="amplitude"/> (0 to 1 of full scale), a whole number of cycles long.</summary>
     public static byte[] Sine(double amplitude, int samples = 16_000)
     {
