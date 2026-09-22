@@ -1,3 +1,5 @@
+using Blurt.Engine.STT;
+
 namespace Blurt.Engine.Config;
 
 /// <summary>Outcome of an <see cref="ApiKeyValidator"/> attempt.</summary>
@@ -44,7 +46,7 @@ public sealed class ApiKeyValidator(IHttpTransport transport, Uri? baseUrl = nul
         var uri = new UriBuilder(_baseUrl) { Path = "/v2/transcript", Query = "limit=1" }.Uri;
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         request.Headers.TryAddWithoutValidation("Authorization", trimmed);
-        request.Headers.TryAddWithoutValidation("User-Agent", HostIdentity.Current.ProductName);
+        request.Headers.TryAddWithoutValidation(UserAgent.HeaderField, UserAgent.Current);
 
         try
         {

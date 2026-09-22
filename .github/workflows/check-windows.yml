@@ -3,10 +3,18 @@ name: check-windows
 on:
   pull_request:
     branches: [main]
-    paths: ["Windows/**", ".github/workflows/check-windows.yml"]
+    paths:
+      - "Windows/**"
+      - "App/Blurt/Blurt/Resources/Sounds/**"
+      - "scripts/windows/**"
+      - ".github/workflows/check-windows.yml"
   push:
     branches: [main]
-    paths: ["Windows/**", ".github/workflows/check-windows.yml"]
+    paths:
+      - "Windows/**"
+      - "App/Blurt/Blurt/Resources/Sounds/**"
+      - "scripts/windows/**"
+      - ".github/workflows/check-windows.yml"
 
 concurrency:
   group: check-windows-${{ github.ref }}

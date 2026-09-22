@@ -18,9 +18,13 @@ public sealed class CredentialManagerCredentialAccess : ICredentialAccess
         if (!AdvApi32Credentials.CredReadW(target, AdvApi32Credentials.CredTypeGeneric, 0, out var credentialPtr))
         {
             var error = Marshal.GetLastWin32Error();
-            return error == AdvApi32Credentials.ErrorNotFound
-                ? CredentialReadResult.Absent
-                : new CredentialReadResult.Unavailable(error);
+            if (error == AdvApi32Credentials.ErrorNotFound)
+            {
+                return CredentialReadResult.Absent;
+            }
+
+            BlurtLog.Warn(LogCategory, new Win32Exception(error).Message);
+            return new CredentialReadResult.Unavailable(error);
         }
 
         try

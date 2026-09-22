@@ -1,5 +1,6 @@
 using System.Net;
 using Blurt.Engine.Config;
+using Blurt.Engine.STT;
 using FakeItEasy;
 using FluentAssertions;
 
@@ -35,7 +36,7 @@ public sealed class ApiKeyValidatorTests
         captured!.RequestUri!.AbsolutePath.Should().Be("/v2/transcript");
         captured.RequestUri!.Query.Should().Contain("limit=1");
         captured.Headers.GetValues("Authorization").Should().Equal("good-key");
-        captured.Headers.GetValues("User-Agent").Should().Equal(HostIdentity.Current.ProductName);
+        string.Join(" ", captured.Headers.GetValues("User-Agent")).Should().Be(UserAgent.Current);
     }
 
     [Test]

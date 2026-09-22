@@ -15,7 +15,7 @@ public sealed class BlurtLogTests
     public void RestoreSink() => BlurtLog.Sink = _original;
 
     [Test]
-    public void EveryLevelWritesCategoryThenMessageToTheSink()
+    public void EveryLevelWritesLevelThenCategoryThenMessageToTheSink()
     {
         var lines = new List<string>();
         BlurtLog.Sink = lines.Add;
@@ -24,7 +24,7 @@ public sealed class BlurtLogTests
         BlurtLog.Warn("Mic", "slow route");
         BlurtLog.Error("STT", "401");
 
-        lines.Should().Equal("Session: started", "Mic: slow route", "STT: 401");
+        lines.Should().Equal("INFO Session: started", "WARN Mic: slow route", "ERROR STT: 401");
     }
 
     [Test]
