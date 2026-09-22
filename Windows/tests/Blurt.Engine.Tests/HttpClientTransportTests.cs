@@ -43,7 +43,7 @@ public sealed class HttpClientTransportTests
     {
         var transport = new HttpClientTransport();
 
-        transport.Client.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
+        transport.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
