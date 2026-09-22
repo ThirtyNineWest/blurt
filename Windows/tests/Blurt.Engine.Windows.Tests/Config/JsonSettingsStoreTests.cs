@@ -26,6 +26,10 @@ public sealed class JsonSettingsStoreTests
         {
             Directory.Delete(_directory, recursive: true);
         }
+        else if (File.Exists(_directory))
+        {
+            File.Delete(_directory);
+        }
     }
 
     [Test]
@@ -147,5 +151,30 @@ public sealed class JsonSettingsStoreTests
         store.Set("s", "true");
 
         store.GetBool("s").Should().BeNull();
+    }
+
+    [Test]
+    public void SetDoesNotThrowWhenThePersistWriteFailsAndKeepsTheValueReadableFromMemory()
+    {
+        // A file occupies the path the store needs as its settings directory, so
+        // Directory.CreateDirectory inside Persist fails every time.
+        File.WriteAllText(_directory, "blocking the settings directory");
+        var blockedPath = Path.Combine(_directory, "settings.json");
+        var store = new JsonSettingsStore(blockedPath);
+        var original = BlurtLog.Sink;
+        var lines = new List<string>();
+        BlurtLog.Sink = lines.Add;
+
+        try
+        {
+            FluentActions.Invoking(() => store.Set("k", "value")).Should().NotThrow();
+
+            store.GetString("k").Should().Be("value");
+            lines.Should().NotBeEmpty();
+        }
+        finally
+        {
+            BlurtLog.Sink = original;
+        }
     }
 }

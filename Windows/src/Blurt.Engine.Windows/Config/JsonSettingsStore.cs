@@ -123,16 +123,29 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
         }
     }
 
+    /// <summary>
+    /// Writes the in-memory settings to disk. A failure here (a locked file, a read-only or missing
+    /// parent, a permission error) is logged and swallowed rather than thrown: the WPF settings window
+    /// calls <see cref="Set(string, string)"/> and <see cref="Remove"/> straight from its property
+    /// setters, so a throw here would crash the window instead of just failing to persist this change.
+    /// </summary>
     private void Persist()
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
+        try
         {
-            Directory.CreateDirectory(directory);
-        }
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-        var tempPath = path + ".tmp";
-        File.WriteAllText(tempPath, JsonSerializer.Serialize(_values));
-        File.Move(tempPath, path, overwrite: true);
+            var tempPath = path + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(_values));
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            BlurtLog.Error(LogCategory, ex.Message);
+        }
     }
 }
