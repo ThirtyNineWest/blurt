@@ -1,16 +1,28 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Threading;
 using Blurt.App.Services;
 using Blurt.App.Settings;
+using Blurt.Engine.Diagnostics;
 using Blurt.Engine.Pipeline;
 
 namespace Blurt.App.Main;
 
-/// <summary>One row of the ready view's recent list: the transcript, its style, and a relative time.</summary>
-public sealed class RecentRow : ObservableObject
+/// <summary>
+/// One row of the ready view's recent list: the transcript, its style, a relative time, and the
+/// acknowledgement of a copy. Create and use on the UI thread.
+/// </summary>
+public sealed class RecentRow : ObservableObject, IDisposable
 {
+    private const string LogCategory = "RecentDictations";
+
+    private readonly Dispatcher _dispatcher;
+    private readonly CopyFeedback _copyFeedback = new();
     private string _relativeLabel;
+    private bool _showsCopyFeedback;
+    private string _copyFeedbackLabel = "";
 
     /// <summary>Creates a row for <paramref name="entry"/> labelled as of <paramref name="now"/>.</summary>
     public RecentRow(RecentDictations.Entry entry, DateTimeOffset now, bool showsSeparator)
@@ -18,6 +30,8 @@ public sealed class RecentRow : ObservableObject
         Entry = entry;
         ShowsSeparator = showsSeparator;
         _relativeLabel = entry.RelativeLabel(now);
+        _dispatcher = Dispatcher.CurrentDispatcher;
+        _copyFeedback.Changed += state => _dispatcher.BeginInvoke(() => ShowCopyFeedback(state));
     }
 
     /// <summary>The dictation this row shows.</summary>
@@ -39,8 +53,61 @@ public sealed class RecentRow : ObservableObject
         private set => Set(ref _relativeLabel, value);
     }
 
+    /// <summary>Whether the trailing slot shows the copy acknowledgement instead of the style, time, and Copy button.</summary>
+    public bool ShowsCopyFeedback
+    {
+        get => _showsCopyFeedback;
+        private set => Set(ref _showsCopyFeedback, value);
+    }
+
+    /// <summary>
+    /// "Copied" or "Couldn't copy" for the latest copy. Kept after the acknowledgement clears, so the
+    /// trailing slot's width holds while it fades.
+    /// </summary>
+    public string CopyFeedbackLabel
+    {
+        get => _copyFeedbackLabel;
+        private set => Set(ref _copyFeedbackLabel, value);
+    }
+
     /// <summary>Re-renders <see cref="RelativeLabel"/> as of <paramref name="now"/>.</summary>
     public void Relabel(DateTimeOffset now) => RelativeLabel = Entry.RelativeLabel(now);
+
+    /// <summary>
+    /// Writes the transcript to the clipboard and acknowledges it for <see cref="CopyFeedback.CopiedDwell"/>;
+    /// a clipboard held by another process is logged and acknowledged as "Couldn't copy". Never throws.
+    /// </summary>
+    public void Copy()
+    {
+        bool copied;
+        try
+        {
+            // A dictation's deferred clipboard restore runs only while the clipboard sequence number
+            // is still the one its paste wrote, so this write is never overwritten by a pending restore.
+            Clipboard.SetText(Text);
+            copied = true;
+        }
+        catch (ExternalException ex)
+        {
+            BlurtLog.Warn(LogCategory, $"copy failed: {ex.GetType().Name} 0x{ex.HResult:X8}");
+            copied = false;
+        }
+
+        _copyFeedback.Report(copied);
+    }
+
+    /// <summary>Stops the pending acknowledgement timer.</summary>
+    public void Dispose() => _copyFeedback.Dispose();
+
+    private void ShowCopyFeedback(CopyFeedbackState state)
+    {
+        if (CopyFeedback.Label(state) is { } label)
+        {
+            CopyFeedbackLabel = label;
+        }
+
+        ShowsCopyFeedback = state != CopyFeedbackState.None;
+    }
 }
 
 /// <summary>
@@ -151,6 +218,11 @@ public sealed class ReadyViewModel : ObservableObject
     {
         var now = DateTimeOffset.Now;
         var entries = _coordinator.RecentDictations.Displayed;
+        foreach (var row in Recent)
+        {
+            row.Dispose();
+        }
+
         Recent.Clear();
         for (var i = 0; i < entries.Count; i++)
         {

@@ -20,30 +20,78 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <StackPanel>
-                <DockPanel Height="{Binding Source={x:Static main:ReadyViewModel.RowHeight}}"
-                           Margin="12,0"
-                           ToolTip="{Binding Text, Mode=OneWay}">
-                  <TextBlock DockPanel.Dock="Right"
-                             VerticalAlignment="Center"
-                             Margin="8,0,0,0"
-                             FontSize="11"
-                             Foreground="{StaticResource Secondary}"
-                             Text="{Binding RelativeLabel, Mode=OneWay}" />
-                  <Border DockPanel.Dock="Right"
-                          Margin="8,0,0,0"
-                          Padding="6,0"
-                          VerticalAlignment="Center"
-                          CornerRadius="7"
-                          Background="{StaticResource CardBorder}"
-                          Visibility="{Binding Style, Mode=OneWay, Converter={x:Static svc:NullToCollapsed.Instance}}">
-                    <TextBlock FontSize="11" Text="{Binding Style, Mode=OneWay}" />
-                  </Border>
-                  <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Text, Mode=OneWay}" />
-                </DockPanel>
+                <Border x:Name="Row"
+                        Height="{Binding Source={x:Static main:ReadyViewModel.RowHeight}}"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        ToolTip="{Binding Text, Mode=OneWay}"
+                        MouseLeftButtonUp="OnRowClicked">
+                  <DockPanel Margin="12,0">
+                    <Grid DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center">
+                      <StackPanel x:Name="StyleAndTime"
+                                  Orientation="Horizontal"
+                                  HorizontalAlignment="Right"
+                                  IsHitTestVisible="False">
+                        <Border Margin="0,0,8,0"
+                                Padding="6,0"
+                                VerticalAlignment="Center"
+                                CornerRadius="7"
+                                Background="{StaticResource CardBorder}"
+                                Visibility="{Binding Style, Mode=OneWay, Converter={x:Static svc:NullToCollapsed.Instance}}">
+                          <TextBlock FontSize="11" Text="{Binding Style, Mode=OneWay}" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="{StaticResource Secondary}"
+                                   Text="{Binding RelativeLabel, Mode=OneWay}" />
+                      </StackPanel>
+                      <Button x:Name="CopyButton"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Padding="6,0"
+                              FontSize="11"
+                              Content="Copy"
+                              IsTabStop="True"
+                              Opacity="0"
+                              IsHitTestVisible="False"
+                              AutomationProperties.Name="Copy dictation"
+                              Click="OnCopyClicked" />
+                      <TextBlock x:Name="CopyFeedback"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Center"
+                                 FontSize="11"
+                                 Foreground="{StaticResource Secondary}"
+                                 Opacity="0"
+                                 IsHitTestVisible="False"
+                                 Text="{Binding CopyFeedbackLabel, Mode=OneWay}" />
+                    </Grid>
+                    <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Text, Mode=OneWay}" />
+                  </DockPanel>
+                </Border>
                 <Rectangle Height="{Binding Source={x:Static main:ReadyViewModel.SeparatorThickness}}"
                            Fill="{StaticResource CardBorder}"
                            Visibility="{Binding ShowsSeparator, Mode=OneWay, Converter={StaticResource Visible}}" />
               </StackPanel>
+              <!-- The Copy button is faded, never collapsed, so it keeps keyboard focus while the
+                   acknowledgement shows. Later triggers win: the acknowledgement overrides hover and focus. -->
+              <DataTemplate.Triggers>
+                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                  <Setter TargetName="StyleAndTime" Property="Opacity" Value="0" />
+                  <Setter TargetName="CopyButton" Property="Opacity" Value="1" />
+                  <Setter TargetName="CopyButton" Property="IsHitTestVisible" Value="True" />
+                </Trigger>
+                <Trigger SourceName="CopyButton" Property="IsKeyboardFocused" Value="True">
+                  <Setter TargetName="StyleAndTime" Property="Opacity" Value="0" />
+                  <Setter TargetName="CopyButton" Property="Opacity" Value="1" />
+                  <Setter TargetName="CopyButton" Property="IsHitTestVisible" Value="True" />
+                </Trigger>
+                <DataTrigger Binding="{Binding ShowsCopyFeedback, Mode=OneWay}" Value="True">
+                  <Setter TargetName="StyleAndTime" Property="Opacity" Value="0" />
+                  <Setter TargetName="CopyButton" Property="Opacity" Value="0" />
+                  <Setter TargetName="CopyButton" Property="IsHitTestVisible" Value="False" />
+                  <Setter TargetName="CopyFeedback" Property="Opacity" Value="1" />
+                </DataTrigger>
+              </DataTemplate.Triggers>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
