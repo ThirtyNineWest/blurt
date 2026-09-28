@@ -63,6 +63,7 @@
                                  Foreground="{StaticResource Secondary}"
                                  Opacity="0"
                                  IsHitTestVisible="False"
+                                 AutomationProperties.LiveSetting="Polite"
                                  Text="{Binding CopyFeedbackLabel, Mode=OneWay}" />
                     </Grid>
                     <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Text, Mode=OneWay}" />

@@ -43,7 +43,7 @@ public sealed class DictationOutcomeLogTests
         await harness.Session.AwaitPipelineAsync();
 
         phase.Should().Be(PipelinePhase.Pasted);
-        OutcomeLines().Should().Equal($"INFO Session: dictation ended: pasted, {Transcript.Length} chars, target=WindowsTerminal");
+        OutcomeLines().Should().Equal($"INFO DictationSession: dictation ended: pasted, {Transcript.Length} chars, target=WindowsTerminal");
     }
 
     [Test]
@@ -59,7 +59,7 @@ public sealed class DictationOutcomeLogTests
 
         phase.Should().Be(PipelinePhase.NoTarget);
         OutcomeLines().Should().Equal(
-            $"INFO Session: dictation ended: copied to clipboard, {Transcript.Length} chars, target=WindowsTerminal");
+            $"INFO DictationSession: dictation ended: copied to clipboard, {Transcript.Length} chars, target=WindowsTerminal");
     }
 
     [Test]
@@ -74,7 +74,7 @@ public sealed class DictationOutcomeLogTests
         await harness.Session.AwaitPipelineAsync();
 
         OutcomeLines().Should().Equal(
-            $"INFO Session: dictation ended: failed: targetAppLost, {Transcript.Length} chars, target=WindowsTerminal");
+            $"INFO DictationSession: dictation ended: failed: targetAppLost, {Transcript.Length} chars, target=WindowsTerminal");
     }
 
     [Test]
@@ -85,7 +85,7 @@ public sealed class DictationOutcomeLogTests
         await harness.DictateAsync();
         await harness.Session.AwaitPipelineAsync();
 
-        OutcomeLines().Should().Equal($"INFO Session: dictation ended: pasted, {Transcript.Length} chars");
+        OutcomeLines().Should().Equal($"INFO DictationSession: dictation ended: pasted, {Transcript.Length} chars");
         Snapshot().Should().NotContain(line => line.Contains(Transcript, StringComparison.Ordinal));
     }
 
@@ -109,5 +109,5 @@ public sealed class DictationOutcomeLogTests
     }
 
     private List<string> OutcomeLines() =>
-        Snapshot().Where(line => line.StartsWith("INFO Session: dictation ended:", StringComparison.Ordinal)).ToList();
+        Snapshot().Where(line => line.StartsWith("INFO DictationSession: dictation ended:", StringComparison.Ordinal)).ToList();
 }

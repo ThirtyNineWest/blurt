@@ -329,7 +329,7 @@ public sealed partial class DictationSession : IAsyncDisposable
         CancelQuietly(change.UploadToCancel);
         if (change.OutcomeLine is { } line)
         {
-            BlurtLog.Info("Session", line);
+            BlurtLog.Info(LogCategory, line);
         }
     }
 
