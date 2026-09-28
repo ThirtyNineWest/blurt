@@ -177,6 +177,7 @@ public sealed partial class DictationSession
             }
 
             snapshot = _recent.Snapshot();
+            _delivered = new DeliveredTranscript(text.Length, context?.AppName);
         }
 
         _log.Append(text, context);

@@ -58,6 +58,7 @@ public sealed partial class DictationSession : IAsyncDisposable
     private CancellationTokenSource? _uploadCts;
     private PipelineRun? _pipelineRun;
     private Task _pipeline = Task.CompletedTask;
+    private DeliveredTranscript? _delivered;
     private bool _disposed;
 
     /// <summary>
@@ -302,19 +303,54 @@ public sealed partial class DictationSession : IAsyncDisposable
         }
 
         CancellationTokenSource? upload = null;
+        string? outcome = null;
         if (next.IsTerminal)
         {
             upload = _uploadCts;
             _uploadCts = null;
             ObserveFaults(_upload);
             _upload = null;
+            if (_delivered is { } delivered)
+            {
+                outcome = OutcomeLine(next, delivered);
+                _delivered = null;
+            }
         }
 
-        return new PhaseChange(next, upload);
+        return new PhaseChange(next, upload, outcome);
     }
 
-    /// <summary>The outside-the-lock half of a phase change: abandon the detached upload.</summary>
-    private void Publish(PhaseChange change) => CancelQuietly(change.UploadToCancel);
+    /// <summary>
+    /// The outside-the-lock half of a phase change: abandon the detached upload and log the finished
+    /// dictation's outcome line.
+    /// </summary>
+    private void Publish(PhaseChange change)
+    {
+        CancelQuietly(change.UploadToCancel);
+        if (change.OutcomeLine is { } line)
+        {
+            BlurtLog.Info("Session", line);
+        }
+    }
+
+    /// <summary>
+    /// Returns the one-line outcome of a dictation whose transcript was delivered, e.g.
+    /// <c>dictation ended: pasted, 212 chars, target=WindowsTerminal</c>. Carries the transcript's
+    /// length and the target's process name only, never the transcript, window title, or field text.
+    /// </summary>
+    private static string OutcomeLine(PipelinePhase terminal, DeliveredTranscript delivered)
+    {
+        var outcome = terminal switch
+        {
+            _ when terminal == PipelinePhase.Pasted => "pasted",
+            _ when terminal == PipelinePhase.NoTarget => "copied to clipboard",
+            _ when terminal == PipelinePhase.Cancelled => "cancelled",
+            PipelinePhase.FailedPhase failed => $"failed: {failed.Error.DiagnosticName}",
+            _ => terminal.ToString(),
+        };
+        var target = delivered.AppName.TrimmedNonEmpty() is { } app ? $", target={app}" : "";
+        return $"dictation ended: {outcome}, {delivered.Length} chars{target}";
+    }
 
     /// <summary>Raises <see cref="PhaseChanged"/> for each queued phase, in order, until the session is disposed.</summary>
     private void DispatchPhaseEvents()
@@ -361,7 +397,10 @@ public sealed partial class DictationSession : IAsyncDisposable
         channel.Writer.TryComplete();
     }
 
-    private readonly record struct PhaseChange(PipelinePhase Phase, CancellationTokenSource? UploadToCancel);
+    private readonly record struct PhaseChange(PipelinePhase Phase, CancellationTokenSource? UploadToCancel, string? OutcomeLine);
+
+    /// <summary>The delivered transcript's length in UTF-16 code units and the target's process name, if known.</summary>
+    private readonly record struct DeliveredTranscript(int Length, string? AppName);
 
     /// <summary>
     /// One spawned transcribe-and-inject run. A cancel revokes it by clearing
