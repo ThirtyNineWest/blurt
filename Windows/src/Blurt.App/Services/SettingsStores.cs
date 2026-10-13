@@ -18,6 +18,7 @@ public sealed class SettingsStores
         TriggerKey = new TriggerKeyStore(store);
         TriggerActivation = new TriggerActivationStore(store);
         KeyTerms = new KeyTermsStore(store);
+        TextShortcuts = new TextShortcutStore(store);
         DeveloperMode = new DeveloperModeStore(store);
         EnhancedTranscripts = new EnhancedTranscriptsStore(store);
         LastUpdateCheck = new LastUpdateCheckStore(store);
@@ -40,6 +41,9 @@ public sealed class SettingsStores
 
     /// <summary>The user's key terms.</summary>
     public KeyTermsStore KeyTerms { get; }
+
+    /// <summary>The spoken phrases expanded into saved text.</summary>
+    public TextShortcutStore TextShortcuts { get; }
 
     /// <summary>Whether the dictation logs are written.</summary>
     public DeveloperModeStore DeveloperMode { get; }

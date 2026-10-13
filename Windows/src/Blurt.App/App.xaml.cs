@@ -138,6 +138,7 @@ public partial class App : Application
         OwnWindowFocusExclusion.Install(components.Focus);
         var dictation = new DictationSettingsViewModel(settings, coordinator);
         var styles = new StylesViewModel(settings);
+        var vocabulary = new VocabularyViewModel(settings);
         var wizard = new WizardViewModel(coordinator, permissions, dictation);
         var mainWindow = new MainWindow(wizard, new ReadyViewModel(coordinator, dictation, styles));
         _mainWindow = mainWindow;
@@ -151,7 +152,7 @@ public partial class App : Application
             () => _settingsWindow is { IsActive: true } active ? active : (Window?)_mainWindow);
 
         var settingsWindow = new SettingsWindow(
-            new SettingsViewModel(settings, dictation, styles, updates, log, apiKey),
+            new SettingsViewModel(settings, dictation, styles, updates, log, apiKey, vocabulary),
             new InstallReset(settings.Store, apiKey, log),
             RestartAfterReset);
         _settingsWindow = settingsWindow;

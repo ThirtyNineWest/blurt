@@ -5,9 +5,9 @@ using Blurt.Engine;
 namespace Blurt.App.Settings;
 
 /// <summary>
-/// The Settings window: General (shortcut, activation, cue voice) and Advanced (transcription,
-/// styles, updates, developer mode, reset). One instance lives for the app's lifetime; closing it
-/// hides it.
+/// The Settings window: General (shortcut, activation, cue voice), Vocabulary (key terms, text
+/// shortcuts), and Advanced (transcription, styles, updates, developer mode, reset). One
+/// instance lives for the app's lifetime; closing it hides it.
 /// </summary>
 public partial class SettingsWindow : Window
 {

@@ -12,6 +12,9 @@
     <TabItem x:Name="GeneralItem" Header="General">
       <settings:GeneralTab />
     </TabItem>
+    <TabItem x:Name="VocabularyItem" Header="Vocabulary">
+      <settings:VocabularyTab />
+    </TabItem>
     <TabItem x:Name="AdvancedItem" Header="Advanced">
       <settings:AdvancedTab x:Name="Advanced" />
     </TabItem>

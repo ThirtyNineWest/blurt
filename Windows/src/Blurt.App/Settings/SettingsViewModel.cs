@@ -24,7 +24,8 @@ public sealed class SettingsViewModel : ObservableObject
         StylesViewModel styles,
         UpdateCheckModel updates,
         DictationLog log,
-        ApiKeyModel apiKey)
+        ApiKeyModel apiKey,
+        VocabularyViewModel vocabulary)
     {
         _developerMode = settings.DeveloperMode;
         _lastUpdateCheck = settings.LastUpdateCheck;
@@ -32,6 +33,7 @@ public sealed class SettingsViewModel : ObservableObject
         ApiKey = apiKey;
         apiKey.PropertyChanged += OnApiKeyChanged;
         Styles = styles;
+        Vocabulary = vocabulary;
         Updates = updates;
         DictationsPath = log.DictationsPath;
         ErrorsPath = log.ErrorsPath;
@@ -49,6 +51,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>The custom styles and the enhanced-transcripts switch.</summary>
     public StylesViewModel Styles { get; }
+
+    /// <summary>The key terms and the text shortcuts.</summary>
+    public VocabularyViewModel Vocabulary { get; }
 
     /// <summary>The update check.</summary>
     public UpdateCheckModel Updates { get; }
@@ -83,6 +88,7 @@ public sealed class SettingsViewModel : ObservableObject
     public void Reload()
     {
         Styles.Reload();
+        Vocabulary.Reload();
         Raise(nameof(LastCheckedCaption), nameof(DeveloperMode));
     }
 

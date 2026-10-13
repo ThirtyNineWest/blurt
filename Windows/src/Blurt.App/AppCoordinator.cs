@@ -59,6 +59,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
             log,
             keyTermsProvider: () => settings.KeyTerms.Terms,
             styleNameProvider: () => settings.EnhancedTranscripts.IsEnabled ? settings.Styles.Active?.Name : null,
+            textShortcutsProvider: () => settings.TextShortcuts.Shortcuts,
             readinessCheck: apiKey.ReadinessCheck(),
             onTranscriptDelivered: (_, recents) => _dispatcher.BeginInvoke(() => RecentDictations = recents));
     }
