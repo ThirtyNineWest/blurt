@@ -12,8 +12,8 @@ public sealed class RecentDictationsTests
     {
         var recent = new RecentDictations();
 
-        recent.Record("one", null, Epoch);
-        recent.Record("two", null, Epoch.AddSeconds(1));
+        recent.Record("one", null, null, Epoch);
+        recent.Record("two", null, null, Epoch.AddSeconds(1));
 
         recent.Entries.Select(e => e.Text).Should().Equal("two", "one");
     }
@@ -26,7 +26,7 @@ public sealed class RecentDictationsTests
 
         for (var offset = 0; offset < texts.Count; offset++)
         {
-            recent.Record(texts[offset], null, Epoch.AddSeconds(offset));
+            recent.Record(texts[offset], null, null, Epoch.AddSeconds(offset));
         }
 
         recent.Entries.Should().HaveCount(RecentDictations.Capacity);
@@ -42,7 +42,7 @@ public sealed class RecentDictationsTests
 
         for (var offset = 0; offset < texts.Length; offset++)
         {
-            recent.Record(texts[offset], null, Epoch.AddSeconds(offset));
+            recent.Record(texts[offset], null, null, Epoch.AddSeconds(offset));
         }
 
         RecentDictations.DisplayCapacity.Should().BeLessThan(RecentDictations.Capacity);
@@ -51,27 +51,39 @@ public sealed class RecentDictationsTests
     }
 
     [Test]
-    public void ProjectsTheHistoryOldestFirstForTheRequestContext()
+    public void ProjectsTheSpokenHistoryOldestFirstForTheRequestContext()
     {
         var recent = new RecentDictations();
         string[] texts = ["a", "b", "c"];
 
         for (var offset = 0; offset < texts.Length; offset++)
         {
-            recent.Record(texts[offset], null, Epoch.AddSeconds(offset));
+            recent.Record(texts[offset], null, null, Epoch.AddSeconds(offset));
         }
 
-        recent.TranscriptsOldestFirst.Should().Equal("a", "b", "c");
+        recent.SpokenOldestFirst.Should().Equal("a", "b", "c");
+    }
+
+    [Test]
+    public void AnEntryKeepsTheSpokenTextBesideThePastedOne()
+    {
+        var recent = new RecentDictations();
+
+        recent.Record("Mail me@example.com.", "Mail personal email.", null, Epoch);
+
+        recent.Entries[0].Text.Should().Be("Mail me@example.com.");
+        recent.Entries[0].Spoken.Should().Be("Mail personal email.");
+        recent.SpokenOldestFirst.Should().Equal("Mail personal email.");
     }
 
     [Test]
     public void EntriesKeepAStableUniqueIdAsNewerOnesPushIn()
     {
         var recent = new RecentDictations();
-        recent.Record("first", null, Epoch);
+        recent.Record("first", null, null, Epoch);
         var firstId = recent.Entries[0].Id;
 
-        recent.Record("second", null, Epoch.AddSeconds(1));
+        recent.Record("second", null, null, Epoch.AddSeconds(1));
 
         recent.Entries.Single(e => e.Text == "first").Id.Should().Be(firstId);
         recent.Entries[0].Id.Should().NotBe(firstId);
@@ -84,7 +96,7 @@ public sealed class RecentDictationsTests
         var recent = new RecentDictations();
         var when = Epoch.AddSeconds(12345);
 
-        recent.Record("hi", null, when);
+        recent.Record("hi", null, null, when);
 
         recent.Entries[0].Timestamp.Should().Be(when);
     }
@@ -94,8 +106,8 @@ public sealed class RecentDictationsTests
     {
         var recent = new RecentDictations();
 
-        recent.Record("styled", "Casual", Epoch);
-        recent.Record("unstyled", null, Epoch.AddSeconds(1));
+        recent.Record("styled", null, "Casual", Epoch);
+        recent.Record("unstyled", null, null, Epoch.AddSeconds(1));
 
         recent.Entries[0].Style.Should().BeNull();
         recent.Entries[1].Style.Should().Be("Casual");
@@ -113,10 +125,10 @@ public sealed class RecentDictationsTests
     public void SnapshotIsIndependentOfLaterRecords()
     {
         var recent = new RecentDictations();
-        recent.Record("one", null, Epoch);
+        recent.Record("one", null, null, Epoch);
 
         var snapshot = recent.Snapshot();
-        recent.Record("two", null, Epoch.AddSeconds(1));
+        recent.Record("two", null, null, Epoch.AddSeconds(1));
 
         snapshot.Entries.Select(e => e.Text).Should().Equal("one");
         recent.Entries.Select(e => e.Text).Should().Equal("two", "one");
@@ -126,8 +138,8 @@ public sealed class RecentDictationsTests
     public void SnapshotCopiesEveryEntry()
     {
         var recent = new RecentDictations();
-        recent.Record("one", "Casual", Epoch);
-        recent.Record("two", null, Epoch.AddSeconds(1));
+        recent.Record("one", null, "Casual", Epoch);
+        recent.Record("two", null, null, Epoch.AddSeconds(1));
 
         var snapshot = recent.Snapshot();
 
@@ -142,7 +154,7 @@ public sealed class RecentDictationsRelativeLabelTests
     private static RecentDictations.Entry Entry()
     {
         var recent = new RecentDictations();
-        recent.Record("hi", null, Recorded);
+        recent.Record("hi", null, null, Recorded);
         return recent.Entries[0];
     }
 

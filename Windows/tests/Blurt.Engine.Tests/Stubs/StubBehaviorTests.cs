@@ -53,7 +53,7 @@ public sealed class StubBehaviorTests
     {
         var gate = new TaskCompletionSource();
         var transcriber = new StubTranscriber { Gate = gate, TranscriptToReturn = "held" };
-        var context = new TranscriptionContext("Notes", null, null, "x", null, [], [], false);
+        var context = new TranscriptionContext("Notes", null, null, "x", null, [], [], [], false);
 
         var request = transcriber.TranscribeAsync(AsyncEnumerable.Empty<byte[]>(), 16_000, context, CancellationToken.None);
         await Task.Yield();

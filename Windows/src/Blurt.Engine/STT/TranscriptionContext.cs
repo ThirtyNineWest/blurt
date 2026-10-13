@@ -1,3 +1,5 @@
+using Blurt.Engine.Config;
+
 namespace Blurt.Engine.STT;
 
 /// <summary>
@@ -13,6 +15,7 @@ namespace Blurt.Engine.STT;
 /// <param name="SelectedText">The current selection in the focused field. Local only.</param>
 /// <param name="RecentTranscripts">The user's recent dictations, oldest first. Sent as the leading <c>stt_prompt</c> lines.</param>
 /// <param name="KeyTerms">User-configured vocabulary. Sent as <c>keyterms_prompt</c>.</param>
+/// <param name="TextShortcuts">The user's text shortcuts. Not sent: <see cref="STTPrompt"/> uses them to put a pasted expansion in <paramref name="PriorText"/> back to its trigger. Empty when there is no prior text to scrub.</param>
 /// <param name="TargetIsSecure">
 /// Whether the capture refused to read the focused field (a password input or unreadable
 /// element). Local only; a transcript dictated into a secure field is not remembered as history.
@@ -25,6 +28,7 @@ public sealed record TranscriptionContext(
     string? SelectedText,
     IReadOnlyList<string> RecentTranscripts,
     IReadOnlyList<string> KeyTerms,
+    IReadOnlyList<TextShortcut> TextShortcuts,
     bool TargetIsSecure)
 {
     /// <summary>
@@ -52,7 +56,8 @@ public sealed record TranscriptionContext(
         && SelectedText == other.SelectedText
         && TargetIsSecure == other.TargetIsSecure
         && RecentTranscripts.SequenceEqual(other.RecentTranscripts)
-        && KeyTerms.SequenceEqual(other.KeyTerms);
+        && KeyTerms.SequenceEqual(other.KeyTerms)
+        && TextShortcuts.SequenceEqual(other.TextShortcuts);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -72,6 +77,11 @@ public sealed record TranscriptionContext(
         foreach (var term in KeyTerms)
         {
             hash.Add(term);
+        }
+
+        foreach (var shortcut in TextShortcuts)
+        {
+            hash.Add(shortcut);
         }
 
         return hash.ToHashCode();

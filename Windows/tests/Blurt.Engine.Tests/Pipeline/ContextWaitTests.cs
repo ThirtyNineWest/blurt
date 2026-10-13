@@ -9,9 +9,9 @@ public sealed class ContextWaitTests
 {
     private static readonly TimeSpan Budget = TimeSpan.FromMilliseconds(500);
 
-    private static readonly TranscriptionContext Context = new("Mail", null, null, "Hi team,", null, [], [], false);
+    private static readonly TranscriptionContext Context = new("Mail", null, null, "Hi team,", null, [], [], [], false);
 
-    private static readonly TranscriptionContext PressKnown = new(null, null, null, null, null, ["earlier"], ["Blurt"], false);
+    private static readonly TranscriptionContext PressKnown = new(null, null, null, null, null, ["earlier"], ["Blurt"], [], false);
 
     [Test]
     public async Task AContextThatResolvedDuringSpeechIsReturnedWithoutWaiting()

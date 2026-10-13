@@ -33,8 +33,8 @@ public sealed class RecentDictations
     /// <summary>The newest <see cref="DisplayCapacity"/> entries.</summary>
     public IReadOnlyList<Entry> Displayed => _entries.Take(DisplayCapacity).ToList();
 
-    /// <summary>Every remembered transcript, oldest first, which is the order the request context wants.</summary>
-    public IReadOnlyList<string> TranscriptsOldestFirst => _entries.AsEnumerable().Reverse().Select(e => e.Text).ToList();
+    /// <summary>Every remembered transcript as spoken, oldest first, which is the order the request context wants.</summary>
+    public IReadOnlyList<string> SpokenOldestFirst => _entries.AsEnumerable().Reverse().Select(e => e.Spoken).ToList();
 
     /// <summary>
     /// Returns the height of a list showing <see cref="DisplayCapacity"/> rows: every row plus a
@@ -44,13 +44,14 @@ public sealed class RecentDictations
         (DisplayCapacity * rowHeight) + ((DisplayCapacity - 1) * separatorThickness);
 
     /// <summary>
-    /// Records <paramref name="text"/> made at <paramref name="at"/> with the custom style name
-    /// <paramref name="style"/> (null for none) at the front, dropping the oldest entries beyond
-    /// <see cref="Capacity"/>.
+    /// Records <paramref name="text"/> (what was pasted) made at <paramref name="at"/> with the custom
+    /// style name <paramref name="style"/> (null for none) at the front, dropping the oldest entries beyond
+    /// <see cref="Capacity"/>. <paramref name="spoken"/> is the transcript before text shortcuts
+    /// changed it; null means the two are the same.
     /// </summary>
-    public void Record(string text, string? style, DateTimeOffset at)
+    public void Record(string text, string? spoken, string? style, DateTimeOffset at)
     {
-        _entries.Insert(0, new Entry(Guid.NewGuid(), text, at, style));
+        _entries.Insert(0, new Entry(Guid.NewGuid(), text, spoken ?? text, at, style));
         if (_entries.Count > Capacity)
         {
             _entries.RemoveRange(Capacity, _entries.Count - Capacity);
@@ -62,10 +63,11 @@ public sealed class RecentDictations
 
     /// <summary>One recorded dictation.</summary>
     /// <param name="Id">Stable identity assigned at creation.</param>
-    /// <param name="Text">The transcript.</param>
+    /// <param name="Text">What was pasted, text shortcuts expanded; what the Recent row shows and copies.</param>
+    /// <param name="Spoken">What the service returned, before any text shortcut was expanded. This, not Text, rides the next request's history.</param>
     /// <param name="Timestamp">When the dictation landed.</param>
     /// <param name="Style">The custom style's display name, or null for the base styling.</param>
-    public sealed record Entry(Guid Id, string Text, DateTimeOffset Timestamp, string? Style)
+    public sealed record Entry(Guid Id, string Text, string Spoken, DateTimeOffset Timestamp, string? Style)
     {
         /// <summary>How long after a dictation <see cref="RelativeLabel"/> says "just now", in seconds.</summary>
         public const double JustNowThresholdSeconds = 60;

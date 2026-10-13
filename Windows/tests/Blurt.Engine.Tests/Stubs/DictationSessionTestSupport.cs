@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Threading.Channels;
 using Blurt.Engine.Audio;
+using Blurt.Engine.Config;
 using Blurt.Engine.Injection;
 using Blurt.Engine.Pipeline;
 using Blurt.Engine.STT;
@@ -231,6 +232,8 @@ public sealed class SessionHarness : IAsyncDisposable
         IReadOnlyList<string>? keyTerms = null,
         Func<IReadOnlyList<string>>? keyTermsProvider = null,
         Func<string?>? styleNameProvider = null,
+        IReadOnlyList<TextShortcut>? textShortcuts = null,
+        Func<IReadOnlyList<TextShortcut>>? textShortcutsProvider = null,
         Func<BlurtError?>? readinessCheck = null,
         Func<bool>? logEnabled = null)
     {
@@ -250,6 +253,7 @@ public sealed class SessionHarness : IAsyncDisposable
             maxRecordingSeconds,
             keyTermsProvider ?? (() => terms),
             styleNameProvider,
+            textShortcutsProvider ?? (() => textShortcuts ?? []),
             readinessCheck,
             (text, recent) =>
             {

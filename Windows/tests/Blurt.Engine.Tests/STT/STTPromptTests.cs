@@ -1,4 +1,5 @@
 using System.Globalization;
+using Blurt.Engine.Config;
 using Blurt.Engine.STT;
 using FluentAssertions;
 using static Blurt.Engine.Tests.Stubs.TranscriberTestSupport;
@@ -176,6 +177,24 @@ public sealed class STTPromptTests
     public void ThePromptIsExactlyTheHistoryThenThePriorChunk()
     {
         STTPrompt.Text(RichContext).Should().Be("Shipping the release notes now.\nthanks for");
+    }
+
+    [Test]
+    public void APastedExpansionInThePriorTextGoesOutAsItsTrigger()
+    {
+        var email = new TextShortcut("personal email", "me@example.com");
+        var context = Context(priorText: "Mail me@example.com.", textShortcuts: [email]);
+
+        STTPrompt.Text(context).Should().Be("Mail personal email.");
+    }
+
+    [Test]
+    public void ScrubbingHappensBeforeTheHistoryDedupe()
+    {
+        var email = new TextShortcut("personal email", "me@example.com");
+        var context = Context(priorText: "Mail me@example.com.", recentTranscripts: ["Mail personal email."], textShortcuts: [email]);
+
+        STTPrompt.Text(context).Should().Be("Mail personal email.");
     }
 
     private static int Runes(string s) => s.EnumerateRunes().Count();

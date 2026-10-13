@@ -1,3 +1,4 @@
+using Blurt.Engine.Config;
 using Blurt.Engine.STT;
 using FluentAssertions;
 
@@ -13,8 +14,9 @@ public sealed class TranscriptionContextTests
         string? selectedText = null,
         string[]? recentTranscripts = null,
         string[]? keyTerms = null,
+        TextShortcut[]? textShortcuts = null,
         bool targetIsSecure = false) =>
-        new(appName, windowTitle, fieldLabel, priorText, selectedText, recentTranscripts ?? [], keyTerms ?? [], targetIsSecure);
+        new(appName, windowTitle, fieldLabel, priorText, selectedText, recentTranscripts ?? [], keyTerms ?? [], textShortcuts ?? [], targetIsSecure);
 
     [Test]
     public void EveryFieldAbsentIsEmpty()
@@ -100,5 +102,20 @@ public sealed class TranscriptionContextTests
         var b = Context(appName: "Notes", keyTerms: ["a"], recentTranscripts: ["r"]);
 
         a.GetHashCode().Should().Be(b.GetHashCode());
+    }
+
+    [Test]
+    public void TextShortcutsAloneDoNotMakeAContextNonEmpty()
+    {
+        Context(textShortcuts: [new TextShortcut("personal email", "me@example.com")]).IsEmpty.Should().BeTrue();
+    }
+
+    [Test]
+    public void ContextsDifferingOnlyInTextShortcutsAreNotEqual()
+    {
+        var email = new TextShortcut("personal email", "me@example.com");
+
+        Context(appName: "Notes", textShortcuts: [email]).Should().Be(Context(appName: "Notes", textShortcuts: [email]));
+        Context(appName: "Notes", textShortcuts: [email]).Should().NotBe(Context(appName: "Notes"));
     }
 }

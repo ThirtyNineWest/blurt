@@ -1,3 +1,4 @@
+using Blurt.Engine.Config;
 using Blurt.Engine.Diagnostics;
 using Blurt.Engine.STT;
 
@@ -131,6 +132,20 @@ public sealed partial class DictationSession
         }
     }
 
+    /// <summary>The user's shortcuts, or none when the provider throws (logged, never onto the dictation path).</summary>
+    private IReadOnlyList<TextShortcut> ReadShortcuts()
+    {
+        try
+        {
+            return _textShortcutsProvider();
+        }
+        catch (Exception ex)
+        {
+            BlurtLog.Error(LogCategory, $"textShortcutsProvider threw {ex.GetType().Name}");
+            return [];
+        }
+    }
+
     private async Task TranscribeAndInjectAsync(PipelineRun run)
     {
         var text = await AwaitUploadAsync(run);
@@ -139,8 +154,12 @@ public sealed partial class DictationSession
             return;
         }
 
-        var trimmed = text.TrimmedNonEmpty();
-        if (trimmed is null)
+        // The log keeps what the service returned; the paste and the Recent list get the expanded
+        // text, and the ring also keeps the spoken version.
+        var expanded = TextShortcutExpander.Expand(text, ReadShortcuts());
+        var spoken = text.TrimmedNonEmpty();
+        var trimmed = expanded.TrimmedNonEmpty();
+        if (spoken is null || trimmed is null)
         {
             TryAdvance(run, PipelinePhase.Transcribing, PipelinePhase.Idle);
             return;
@@ -173,7 +192,7 @@ public sealed partial class DictationSession
             // as request context on every later dictation, in any app.
             if (context?.TargetIsSecure != true)
             {
-                _recent.Record(trimmed, style, now);
+                _recent.Record(trimmed, spoken, style, now);
             }
 
             snapshot = _recent.Snapshot();
@@ -190,7 +209,7 @@ public sealed partial class DictationSession
             BlurtLog.Error(LogCategory, $"onTranscriptDelivered threw {ex.GetType().Name}");
         }
 
-        await InjectAsync(run, text, context);
+        await InjectAsync(run, expanded, context);
     }
 
     /// <summary>

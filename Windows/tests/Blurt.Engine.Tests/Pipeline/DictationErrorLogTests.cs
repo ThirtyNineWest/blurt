@@ -12,7 +12,7 @@ public sealed class DictationErrorEntryTests
     private static readonly DateTimeOffset Moment = DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
 
     private static readonly TranscriptionContext Context = new(
-        "1Password", "Vault", "Password", "hunter2", "s3cret", ["earlier dictation"], ["Term"], false);
+        "1Password", "Vault", "Password", "hunter2", "s3cret", ["earlier dictation"], ["Term"], [], false);
 
     [Test]
     public void RecordsTheStableKindTheHumanDescriptionAndATimestamp()
@@ -168,7 +168,7 @@ public sealed class DictationErrorLogGateTests
     public async Task WithDeveloperModeOffAppendErrorWritesNothingToDisk()
     {
         using var log = new TestLog(isEnabled: () => false);
-        var context = new TranscriptionContext("1Password", "Vault", "Password", "hunter2", null, [], [], false);
+        var context = new TranscriptionContext("1Password", "Vault", "Password", "hunter2", null, [], [], [], false);
 
         log.Log.AppendError(new BlurtError.TargetAppLost(), context);
         await log.Log.DrainAsync();

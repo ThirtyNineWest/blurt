@@ -1,3 +1,4 @@
+using Blurt.Engine.Config;
 using Blurt.Engine.Diagnostics;
 using Blurt.Engine.FocusCapture;
 using Blurt.Engine.STT;
@@ -129,10 +130,10 @@ public sealed partial class DictationSession
         IReadOnlyList<string> recent;
         lock (_gate)
         {
-            recent = _recent.TranscriptsOldestFirst;
+            recent = _recent.SpokenOldestFirst;
         }
 
-        var pressKnown = new TranscriptionContext(null, null, null, null, null, recent, keyTerms, TargetIsSecure: false);
+        var pressKnown = new TranscriptionContext(null, null, null, null, null, recent, keyTerms, [], TargetIsSecure: false);
         var press = new PressContext(pressKnown.IsEmpty ? null : pressKnown);
         lock (_gate)
         {
@@ -160,12 +161,12 @@ public sealed partial class DictationSession
 
             // Fails closed: an unreadable field is treated as secure, so its dictation is never
             // remembered as history.
-            press.Store(new TranscriptionContext(appName, null, null, null, null, recent, keyTerms, TargetIsSecure: true));
+            press.Store(new TranscriptionContext(appName, null, null, null, null, recent, keyTerms, [], TargetIsSecure: true));
             return;
         }
 
         var context = new TranscriptionContext(
-            appName, field.WindowTitle, field.FieldLabel, field.PriorText, field.SelectedText, recent, keyTerms, field.IsSecure);
+            appName, field.WindowTitle, field.FieldLabel, field.PriorText, field.SelectedText, recent, keyTerms, field.PriorText is null ? [] : ReadShortcuts(), field.IsSecure);
         press.Store(context.IsEmpty ? null : context);
     }
 

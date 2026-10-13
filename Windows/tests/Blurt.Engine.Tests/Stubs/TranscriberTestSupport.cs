@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Blurt.Engine.Config;
 using Blurt.Engine.STT;
 
 namespace Blurt.Engine.Tests.Stubs;
@@ -50,8 +51,9 @@ public static class TranscriberTestSupport
         string? priorText = null,
         string? selectedText = null,
         string[]? recentTranscripts = null,
-        string[]? keyTerms = null) =>
-        new(appName, windowTitle, fieldLabel, priorText, selectedText, recentTranscripts ?? [], keyTerms ?? [], false);
+        string[]? keyTerms = null,
+        TextShortcut[]? textShortcuts = null) =>
+        new(appName, windowTitle, fieldLabel, priorText, selectedText, recentTranscripts ?? [], keyTerms ?? [], textShortcuts ?? [], false);
 
     /// <summary>The JSON payload of the <c>config</c> part of a multipart dictation body, parsed.</summary>
     public static JsonElement ConfigPart(byte[] body)

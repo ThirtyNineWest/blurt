@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Blurt.Engine.Audio;
+using Blurt.Engine.Config;
 using Blurt.Engine.Diagnostics;
 using Blurt.Engine.FocusCapture;
 using Blurt.Engine.Injection;
@@ -39,6 +40,7 @@ public sealed partial class DictationSession : IAsyncDisposable
     private readonly double _maxRecordingSeconds;
     private readonly Func<IReadOnlyList<string>> _keyTermsProvider;
     private readonly Func<string?> _styleNameProvider;
+    private readonly Func<IReadOnlyList<TextShortcut>> _textShortcutsProvider;
     private readonly Func<BlurtError?> _readinessCheck;
     private readonly Action<string, RecentDictations>? _onTranscriptDelivered;
     private readonly Channel<Command> _commands = Channel.CreateUnbounded<Command>(new UnboundedChannelOptions { SingleReader = true });
@@ -66,6 +68,7 @@ public sealed partial class DictationSession : IAsyncDisposable
     /// the context-wait budget, and history timestamps (system clock by default). The providers are
     /// read afresh at each press: <paramref name="keyTermsProvider"/> for the request's key terms,
     /// <paramref name="styleNameProvider"/> for the custom style a transcript was made with,
+    /// <paramref name="textShortcutsProvider"/> for the text shortcuts expanded before the paste,
     /// <paramref name="readinessCheck"/> for a blocker that refuses the press before capture.
     /// <paramref name="onTranscriptDelivered"/> receives each non-empty trimmed transcript with a
     /// snapshot of the history it joined, before the paste.
@@ -80,6 +83,7 @@ public sealed partial class DictationSession : IAsyncDisposable
         double maxRecordingSeconds = SyncSTTLimits.AutoReleaseSeconds,
         Func<IReadOnlyList<string>>? keyTermsProvider = null,
         Func<string?>? styleNameProvider = null,
+        Func<IReadOnlyList<TextShortcut>>? textShortcutsProvider = null,
         Func<BlurtError?>? readinessCheck = null,
         Action<string, RecentDictations>? onTranscriptDelivered = null)
     {
@@ -97,6 +101,7 @@ public sealed partial class DictationSession : IAsyncDisposable
         _maxRecordingSeconds = maxRecordingSeconds;
         _keyTermsProvider = keyTermsProvider ?? (static () => []);
         _styleNameProvider = styleNameProvider ?? (static () => null);
+        _textShortcutsProvider = textShortcutsProvider ?? (static () => []);
         _readinessCheck = readinessCheck ?? (static () => null);
         _onTranscriptDelivered = onTranscriptDelivered;
         _ = Task.Run(ConsumeCommandsAsync);

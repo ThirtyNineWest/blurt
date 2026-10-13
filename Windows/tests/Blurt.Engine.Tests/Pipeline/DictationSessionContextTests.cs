@@ -25,7 +25,7 @@ public sealed class DictationSessionContextTests
         await harness.DictateAsync();
 
         var expected = new TranscriptionContext(
-            "Mail", "Re: Q3 pricing", "Body", "Hi Sam,", "the old plan", [], ["AssemblyAI"], TargetIsSecure: false);
+            "Mail", "Re: Q3 pricing", "Body", "Hi Sam,", "the old plan", [], ["AssemblyAI"], [], TargetIsSecure: false);
         harness.Transcriber.ReceivedContexts.Should().Equal(expected);
         harness.Injector.Target.Should().Be(Mail);
         harness.Injector.Insertions.Should().Equal(new StubInjector.Insertion("Hello world.", "Hi Sam,", "Re: Q3 pricing"));
@@ -156,7 +156,7 @@ public sealed class DictationSessionContextTests
 
         await harness.DictateAsync();
 
-        new TranscriptionContext(null, null, null, null, null, [], [], TargetIsSecure: true).IsEmpty.Should().BeFalse();
+        new TranscriptionContext(null, null, null, null, null, [], [], [], TargetIsSecure: true).IsEmpty.Should().BeFalse();
         harness.Transcriber.ReceivedContexts.Should().ContainSingle().Which!.TargetIsSecure.Should().BeTrue();
         harness.Deliveries.Should().ContainSingle().Which.Recent.Entries.Should().BeEmpty();
     }

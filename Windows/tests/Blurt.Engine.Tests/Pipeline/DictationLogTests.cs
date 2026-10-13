@@ -11,7 +11,7 @@ public sealed class DictationLogEntryTests
     private static readonly DateTimeOffset Moment = DateTimeOffset.FromUnixTimeSeconds(1_700_000_000).AddMilliseconds(123);
 
     private static readonly TranscriptionContext Context = new(
-        "Mail", "Re: Q3 pricing", "Body", "Hi Sam,", "the old plan", [], [], false);
+        "Mail", "Re: Q3 pricing", "Body", "Hi Sam,", "the old plan", [], [], [], false);
 
     private static DictationLog Log => new(() => true, Path.GetTempPath(), TestLog.RenderPrompt, TestLog.FitKeyterms);
 
@@ -77,7 +77,7 @@ public sealed class DictationLogEntryTests
     [Test]
     public void KeepsThePriorChunkRawWhereThePromptCarryingItIsTrimmed()
     {
-        var context = new TranscriptionContext("Mail", null, null, "Hi Sam, ", null, [], [], false);
+        var context = new TranscriptionContext("Mail", null, null, "Hi Sam, ", null, [], [], [], false);
 
         var entry = Log.MakeEntry("p", context, Moment);
 
@@ -88,7 +88,7 @@ public sealed class DictationLogEntryTests
     [Test]
     public void ANullPriorTellsAHistoryOnlyPromptApartFromAPriorChunk()
     {
-        var context = new TranscriptionContext("Mail", null, null, null, null, ["Said this before."], [], false);
+        var context = new TranscriptionContext("Mail", null, null, null, null, ["Said this before."], [], [], false);
 
         var entry = Log.MakeEntry("p", context, Moment);
 
@@ -99,7 +99,7 @@ public sealed class DictationLogEntryTests
     [Test]
     public void RecordsTheKeyTermsFittedTheWayTheRequestFitsThem()
     {
-        var context = new TranscriptionContext("Mail", null, null, "Hi Sam,", null, [], ["AssemblyAI", "  ", "LeMUR"], false);
+        var context = new TranscriptionContext("Mail", null, null, "Hi Sam,", null, [], ["AssemblyAI", "  ", "LeMUR"], [], false);
 
         var entry = Log.MakeEntry("p", context, Moment);
 
@@ -109,7 +109,7 @@ public sealed class DictationLogEntryTests
     [Test]
     public void OmitsTheKeyTermsAndPromptWhenEmpty()
     {
-        var context = new TranscriptionContext("Mail", null, null, null, null, [], ["  "], false);
+        var context = new TranscriptionContext("Mail", null, null, null, null, [], ["  "], [], false);
 
         var entry = Log.MakeEntry("p", context, Moment);
 
@@ -208,7 +208,7 @@ public sealed class DictationLogTests
     [Test]
     public async Task ANonEmptyPromptAndKeyTermsAreWrittenWithTheirValues()
     {
-        var context = new TranscriptionContext("Mail", null, null, "Hi Sam,", null, [], ["AssemblyAI", "LeMUR"], false);
+        var context = new TranscriptionContext("Mail", null, null, "Hi Sam,", null, [], ["AssemblyAI", "LeMUR"], [], false);
 
         _log.Log.Append("p", context);
         var entry = (await _log.TranscriptsAsync()).Should().ContainSingle().Subject;
@@ -259,7 +259,7 @@ public sealed class DictationLogGateTests
     [Test]
     public async Task TheGateIsCheckedBeforeTheContextIsTouched()
     {
-        var context = new TranscriptionContext("1Password", "Vault", "Password", "hunter2", null, [], [], false);
+        var context = new TranscriptionContext("1Password", "Vault", "Password", "hunter2", null, [], [], [], false);
         using var off = new TestLog(isEnabled: () => false);
         using var on = new TestLog();
 

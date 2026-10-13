@@ -1,3 +1,5 @@
+using Blurt.Engine.Pipeline;
+
 namespace Blurt.Engine.STT;
 
 /// <summary>
@@ -45,7 +47,13 @@ public static class STTPrompt
         }
 
         var recent = context.RecentTranscripts.Select(t => t.TrimmedNonEmpty()).OfType<string>().ToList();
-        if (context.PriorText.TrimmedNonEmpty() is not { } prior)
+
+        // Scrubbed where the wire string is built: the log's prior text and the paste separator
+        // read the field text as captured.
+        var scrubbed = context.PriorText is null
+            ? null
+            : TextShortcutExpander.RedactingExpansions(context.PriorText, context.TextShortcuts);
+        if (scrubbed.TrimmedNonEmpty() is not { } prior)
         {
             return Fitted(recent);
         }
