@@ -38,7 +38,8 @@ public sealed class DictationKeyHookTests
         () => _calls.Add("stop"),
         () => _calls.Add("cancel"),
         () => _calls.Add("discarded"),
-        _clock);
+        onHardwareKeyDown: () => _calls.Add("input"),
+        clock: _clock);
 
     private static DictationKeyRouter.Event Down(int vk = RightControl) =>
         new DictationKeyRouter.Event.FlagsChanged(vk, true);
@@ -195,6 +196,24 @@ public sealed class DictationKeyHookTests
         _hook.HandleRawKey(HookEventReducer.WmKeyUp, RightControl, ControlScanCode, HookEventReducer.LlkhfUp, 0);
 
         _calls.Should().Equal("start");
+    }
+
+    [Test]
+    public void TheTriggerKeyAndInjectedKeysDoNotTouchTheInputClock()
+    {
+        _hook.HandleRawKey(HookEventReducer.WmKeyDown, RightControl, ControlScanCode, 0, 0);
+        _hook.HandleRawKey(HookEventReducer.WmKeyUp, RightControl, ControlScanCode, HookEventReducer.LlkhfUp, 0);
+        _hook.HandleRawKey(HookEventReducer.WmKeyDown, KeyV, 0, HookEventReducer.LlkhfInjected, HookEventReducer.InjectedTag);
+
+        _calls.Should().NotContain("input");
+    }
+
+    [Test]
+    public void AnOrdinaryKeyDownTouchesTheInputClockBeforeItIsRouted()
+    {
+        _hook.HandleRawKey(HookEventReducer.WmKeyDown, KeyC, 0, 0, 0);
+
+        _calls.Should().Equal("input");
     }
 
     [Test]

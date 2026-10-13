@@ -6,6 +6,7 @@ using Blurt.Engine.Injection;
 using Blurt.Engine.STT;
 using Blurt.Engine.Windows.Audio;
 using Blurt.Engine.Windows.FocusCapture;
+using Blurt.Engine.Windows.Hotkey;
 using Blurt.Engine.Windows.Injection;
 
 namespace Blurt.App;
@@ -15,7 +16,9 @@ namespace Blurt.App;
 /// <param name="Transcriber">The AssemblyAI client.</param>
 /// <param name="Injector">The clipboard-paste injector.</param>
 /// <param name="Focus">Focus capture, also told which windows are Blurt's own.</param>
-public sealed record DictationComponents(IMicCapture Mic, ITranscriber Transcriber, IInjector Injector, UiaFocusCapture Focus)
+/// <param name="UserInput">When the user last typed or clicked, fed by the low-level hooks and read by the injector.</param>
+public sealed record DictationComponents(
+    IMicCapture Mic, ITranscriber Transcriber, IInjector Injector, UiaFocusCapture Focus, UserInputClock UserInput)
 {
     /// <summary>
     /// The real pipeline: WASAPI capture, the AssemblyAI transcriber over <paramref name="transport"/>
@@ -25,11 +28,12 @@ public sealed record DictationComponents(IMicCapture Mic, ITranscriber Transcrib
     public static DictationComponents Production(IHttpTransport transport, IApiKeyGateway keyStore, SettingsStores settings)
     {
         var focus = new UiaFocusCapture();
+        var userInput = new UserInputClock();
         var transcriber = new AssemblyAITranscriber(
             () => keyStore.Current,
             transport,
             enhancedTranscripts: () => settings.EnhancedTranscripts.IsEnabled,
             customStyle: () => settings.Styles.ActiveInstructions);
-        return new DictationComponents(new WasapiMicCapture(), transcriber, new ClipboardInjector(focus), focus);
+        return new DictationComponents(new WasapiMicCapture(), transcriber, new ClipboardInjector(focus, userInput), focus, userInput);
     }
 }

@@ -29,6 +29,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     private readonly CueSoundPlayer _cues;
     private readonly CancellationTokenSource _lifetime = new();
     private DictationKeyHook? _keyHook;
+    private LowLevelMouseHook? _mouseHook;
     private OverlayWindow? _overlay;
     private Task _levelsObserver = Task.CompletedTask;
     private PipelinePhase _phase = PipelinePhase.Idle;
@@ -126,7 +127,8 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
             onStart: () => session.Submit(Command.Press),
             onStop: () => session.Submit(Command.Release),
             onCancel: () => session.Submit(Command.Cancel),
-            onRecordingDiscarded: () => session.Submit(Command.CancelRecording));
+            onRecordingDiscarded: () => session.Submit(Command.CancelRecording),
+            onHardwareKeyDown: _components.UserInput.Touch);
         Session.PhaseChanged += OnPhaseChanged;
         _levelsObserver = Task.Run(() => ObserveLevelsAsync(_lifetime.Token));
     }
@@ -138,6 +140,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     public void ShowOverlayArmed()
     {
         _keyHook?.EnsureRunning();
+        EnsureMouseHook();
         if (_overlay is null)
         {
             _overlay = new OverlayWindow(_settings.OverlayOrigin);
@@ -150,12 +153,46 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     /// <summary>Hides the pill, for when setup stops being complete.</summary>
     public void HideOverlay() => _overlay?.HidePill();
 
-    /// <summary>Retries a key hook install that failed; a no-op while the hook is installed.</summary>
+    /// <summary>Retries a key or mouse hook install that failed; a no-op while both hooks are installed.</summary>
     public void RetryKeyHookInstallIfNeeded()
     {
         if (_keyHook is { IsInstalled: false } hook)
         {
             hook.EnsureRunning();
+        }
+
+        if (_keyHook is not null && _mouseHook is not { IsInstalled: true })
+        {
+            EnsureMouseHook();
+        }
+    }
+
+    private void EnsureMouseHook()
+    {
+        if (_mouseHook is { IsInstalled: true })
+        {
+            return;
+        }
+
+        _mouseHook?.Dispose();
+        var hook = new LowLevelMouseHook();
+        hook.RawMouse += OnRawMouse;
+        if (!hook.Install())
+        {
+            hook.Dispose();
+            _mouseHook = null;
+            return;
+        }
+
+        _mouseHook = hook;
+    }
+
+    // Injected buttons (LLMHF_INJECTED) are synthetic and never count as the user clicking.
+    private void OnRawMouse(int message, uint flags, nuint extraInfo)
+    {
+        if ((flags & 0x01) == 0)
+        {
+            _components.UserInput.Touch();
         }
     }
 
@@ -172,6 +209,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         // returned task still leaves no keyboard hook behind.
         Session.PhaseChanged -= OnPhaseChanged;
         _keyHook?.Dispose();
+        _mouseHook?.Dispose();
         await _lifetime.CancelAsync();
         await Session.DisposeAsync();
         await _levelsObserver;

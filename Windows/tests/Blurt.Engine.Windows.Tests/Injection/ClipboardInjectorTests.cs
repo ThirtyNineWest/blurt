@@ -195,6 +195,34 @@ public sealed class ClipboardInjectorTests
     }
 
     [Test]
+    public async Task TypingOrClickingAfterAPasteDropsTheSameWindowSeparator()
+    {
+        // In an editor whose caret is unreadable, pressing Enter between two dictations keeps the
+        // window title but moves the caret off the last paste, so a leading space there is stray.
+        var harness = new Harness(null, TimeSpan.Zero) { TimeSinceUserInput = TimeSpan.Zero };
+        await harness.Injector.SetTargetAsync(Target);
+
+        await harness.Injector.InsertAsync("First.", null, "Doc - Google Docs", CancellationToken.None);
+        harness.Clock.Advance(TimeSpan.FromMilliseconds(1));
+        await harness.Injector.InsertAsync("Second.", null, "Doc - Google Docs", CancellationToken.None);
+
+        harness.Pasted.Should().Equal("First.", "Second.");
+    }
+
+    [Test]
+    public async Task InputOlderThanTheLastPasteKeepsTheSameWindowSeparator()
+    {
+        var harness = new Harness(null, TimeSpan.Zero) { TimeSinceUserInput = TimeSpan.FromMinutes(5) };
+        await harness.Injector.SetTargetAsync(Target);
+
+        await harness.Injector.InsertAsync("First.", null, "notes.txt — Editor", CancellationToken.None);
+        harness.Clock.Advance(TimeSpan.FromSeconds(30));
+        await harness.Injector.InsertAsync("Second.", null, "notes.txt — Editor", CancellationToken.None);
+
+        harness.Pasted.Should().Equal("First.", " Second.");
+    }
+
+    [Test]
     public async Task AThrownInsertDoesNotBlockTheNextOne()
     {
         var harness = new Harness("user-clipboard") { Editable = false };
@@ -238,6 +266,7 @@ public sealed class ClipboardInjectorTests
                 ActivateTarget,
                 () => Editable,
                 IsOpaque,
+                () => TimeSinceUserInput,
                 Clipboard,
                 Clock);
         }
@@ -257,6 +286,8 @@ public sealed class ClipboardInjectorTests
         public bool Editable { get; set; } = true;
 
         public bool Opaque { get; init; }
+
+        public TimeSpan TimeSinceUserInput { get; set; } = TimeSpan.MaxValue;
 
         /// <summary>The clipboard contents at each posted paste keystroke.</summary>
         public IReadOnlyList<string?> Pasted

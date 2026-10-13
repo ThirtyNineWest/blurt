@@ -2,10 +2,11 @@ using System.Runtime.InteropServices;
 
 namespace Blurt.Engine.Windows.Hotkey.Interop;
 
-/// <summary>The <c>user32</c> and <c>kernel32</c> calls a low-level keyboard hook and its message loop need.</summary>
+/// <summary>The <c>user32</c> and <c>kernel32</c> calls the low-level keyboard and mouse hooks and their message loop need.</summary>
 internal static partial class User32Hook
 {
     internal const int WhKeyboardLl = 13;
+    internal const int WhMouseLl = 14;
     internal const uint WmQuit = 0x0012;
     internal const uint WmUser = 0x0400;
     internal const uint PmNoRemove = 0x0000;
@@ -16,6 +17,25 @@ internal static partial class User32Hook
     {
         internal uint VkCode;
         internal uint ScanCode;
+        internal uint Flags;
+        internal uint Time;
+        internal nuint ExtraInfo;
+    }
+
+    /// <summary>The <c>POINT</c> structure.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Point
+    {
+        internal int X;
+        internal int Y;
+    }
+
+    /// <summary>The <c>MSLLHOOKSTRUCT</c> a <c>WH_MOUSE_LL</c> callback receives through <c>lParam</c>.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MsLlHookStruct
+    {
+        internal Point Pt;
+        internal uint MouseData;
         internal uint Flags;
         internal uint Time;
         internal nuint ExtraInfo;

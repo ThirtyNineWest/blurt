@@ -25,6 +25,7 @@ public sealed class DictationKeyHook : IDisposable
     private readonly Action _onStop;
     private readonly Action _onCancel;
     private readonly Action _onRecordingDiscarded;
+    private readonly Action? _onHardwareKeyDown;
     private readonly TimeProvider _clock;
     private readonly long _reference;
     private readonly Lock _routerGate = new();
@@ -38,6 +39,10 @@ public sealed class DictationKeyHook : IDisposable
     /// Invoked when a state reset (rebinding, terminal-phase sync) discards a live gate state whose
     /// ending key events can no longer arrive, so the owner must cancel the recording.
     /// </param>
+    /// <param name="onHardwareKeyDown">
+    /// Invoked on the hook thread for every key-down that is neither Blurt's own injected keystroke
+    /// nor the trigger key, before the event is routed.
+    /// </param>
     public DictationKeyHook(
         TriggerKeyStore keys,
         TriggerActivationStore activation,
@@ -45,6 +50,7 @@ public sealed class DictationKeyHook : IDisposable
         Action onStop,
         Action onCancel,
         Action onRecordingDiscarded,
+        Action? onHardwareKeyDown = null,
         TimeProvider? clock = null)
     {
         _keys = keys;
@@ -53,6 +59,7 @@ public sealed class DictationKeyHook : IDisposable
         _onStop = onStop;
         _onCancel = onCancel;
         _onRecordingDiscarded = onRecordingDiscarded;
+        _onHardwareKeyDown = onHardwareKeyDown;
         _clock = clock ?? TimeProvider.System;
         _reference = _clock.GetTimestamp();
         _router = new DictationKeyRouter(keys.TriggerKey.KeyCode(), activation: activation.Activation);
@@ -159,6 +166,18 @@ public sealed class DictationKeyHook : IDisposable
     public void HandleRawKey(int message, int vkCode, int scanCode, uint flags, nuint extraInfo)
     {
         DictationKeyGate.Action action;
+        int triggerKeyCode;
+        lock (_routerGate)
+        {
+            triggerKeyCode = _router.TriggerKeyCode;
+        }
+
+        if (_onHardwareKeyDown is { } touch
+            && HookEventReducer.IsHardwareKeyDown(message, vkCode, extraInfo, triggerKeyCode))
+        {
+            touch();
+        }
+
         lock (_routerGate)
         {
             var routed = HookEventReducer.Reduce(message, vkCode, scanCode, flags, extraInfo, _router.TriggerKeyCode);

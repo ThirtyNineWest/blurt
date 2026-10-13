@@ -25,6 +25,13 @@ public static class HookEventReducer
     private const int VkLeftControl = 0xA2;
 
     /// <summary>
+    /// Returns whether the delivery is a key-down of any key other than the trigger that Blurt did not
+    /// inject, which is what counts as the user typing.
+    /// </summary>
+    public static bool IsHardwareKeyDown(int message, int vkCode, nuint extraInfo, int triggerKeyCode) =>
+        extraInfo != InjectedTag && vkCode != triggerKeyCode && message is WmKeyDown or WmSysKeyDown;
+
+    /// <summary>
     /// Returns a <see cref="DictationKeyRouter.Event.FlagsChanged"/> for a down or up of the trigger,
     /// a <see cref="DictationKeyRouter.Event.KeyDown"/> for a down of any other key, and null for an
     /// event carrying <see cref="InjectedTag"/>, AltGr's fake Left Control, a key-up of another key,

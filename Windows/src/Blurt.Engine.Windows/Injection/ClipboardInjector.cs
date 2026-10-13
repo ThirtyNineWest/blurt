@@ -2,6 +2,7 @@ using Blurt.Engine.Diagnostics;
 using Blurt.Engine.FocusCapture;
 using Blurt.Engine.Injection;
 using Blurt.Engine.Windows.FocusCapture;
+using Blurt.Engine.Windows.Hotkey;
 using Blurt.Engine.Windows.Injection.Interop;
 
 namespace Blurt.Engine.Windows.Injection;
@@ -22,24 +23,27 @@ public sealed class ClipboardInjector : IInjector
     private readonly Func<FocusTarget, Task<bool>> _activateTarget;
     private readonly Func<bool> _hasEditableTarget;
     private readonly Func<FocusTarget?, bool> _isOpaqueApp;
+    private readonly Func<TimeSpan> _timeSinceUserInput;
     private readonly IClipboardAccess _clipboard;
     private readonly TimeProvider _clock;
     private readonly Lock _gate = new();
     private FocusTarget? _target;
-    private ResolvedInsert? _lastInserted;
+    private (ResolvedInsert Resolved, long At)? _lastInserted;
     private Task _pendingSettle = Task.CompletedTask;
 
     /// <summary>
     /// Creates an injector over the Win32 clipboard and <c>SendInput</c> that judges editability with
     /// <paramref name="focus"/> and treats browser and Chromium hosts as pasteable without an editable signal.
+    /// <paramref name="userInput"/> says when the user last typed or clicked.
     /// </summary>
-    public ClipboardInjector(UiaFocusCapture focus, TimeSpan? pasteSettle = null)
+    public ClipboardInjector(UiaFocusCapture focus, UserInputClock userInput, TimeSpan? pasteSettle = null)
         : this(
             pasteSettle ?? DefaultPasteSettle,
             User32Input.PostCtrlV,
             static target => ForegroundActivator.ActivateAsync(target, TimeProvider.System, CancellationToken.None),
             (focus ?? throw new ArgumentNullException(nameof(focus))).HasEditableFocusedElement,
             static target => target is not null && ChromiumHost.IsOpaque(target.ProcessPath, target.ProcessName),
+            userInput is null ? throw new ArgumentNullException(nameof(userInput)) : () => userInput.TimeSinceInput,
             new Win32Clipboard(),
             TimeProvider.System)
     {
@@ -51,6 +55,7 @@ public sealed class ClipboardInjector : IInjector
     /// <param name="activateTarget">Brings the target window to the foreground; returns false when it could not.</param>
     /// <param name="hasEditableTarget">Returns whether the focused element accepts text.</param>
     /// <param name="isOpaqueApp">Returns whether the target host exposes no editable signal for real text fields.</param>
+    /// <param name="timeSinceUserInput">How long since the user last pressed a key or clicked; <see cref="TimeSpan.MaxValue"/> when never.</param>
     /// <param name="clipboard">The clipboard the paste writes and restores.</param>
     /// <param name="clock">The clock the settle delay runs on.</param>
     public ClipboardInjector(
@@ -59,6 +64,7 @@ public sealed class ClipboardInjector : IInjector
         Func<FocusTarget, Task<bool>> activateTarget,
         Func<bool> hasEditableTarget,
         Func<FocusTarget?, bool> isOpaqueApp,
+        Func<TimeSpan> timeSinceUserInput,
         IClipboardAccess clipboard,
         TimeProvider clock)
     {
@@ -66,6 +72,7 @@ public sealed class ClipboardInjector : IInjector
         ArgumentNullException.ThrowIfNull(activateTarget);
         ArgumentNullException.ThrowIfNull(hasEditableTarget);
         ArgumentNullException.ThrowIfNull(isOpaqueApp);
+        ArgumentNullException.ThrowIfNull(timeSinceUserInput);
         ArgumentNullException.ThrowIfNull(clipboard);
         ArgumentNullException.ThrowIfNull(clock);
         _pasteSettle = pasteSettle;
@@ -73,6 +80,7 @@ public sealed class ClipboardInjector : IInjector
         _activateTarget = activateTarget;
         _hasEditableTarget = hasEditableTarget;
         _isOpaqueApp = isOpaqueApp;
+        _timeSinceUserInput = timeSinceUserInput;
         _clipboard = clipboard;
         _clock = clock;
     }
@@ -137,14 +145,20 @@ public sealed class ClipboardInjector : IInjector
     {
         ct.ThrowIfCancellationRequested();
         FocusTarget? target;
-        ResolvedInsert? lastInserted;
+        ResolvedInsert? continuity = null;
         lock (_gate)
         {
             target = _target;
-            lastInserted = _lastInserted;
+
+            // The last paste still precedes the caret only if the user has not typed or clicked
+            // since it; otherwise it is forgotten, as a window change would be.
+            if (_lastInserted is { } last && _timeSinceUserInput() >= _clock.GetElapsedTime(last.At))
+            {
+                continuity = last.Resolved;
+            }
         }
 
-        var resolved = InsertResolver.Resolve(text, priorText, windowTitle, target?.ProcessId, lastInserted);
+        var resolved = InsertResolver.Resolve(text, priorText, windowTitle, target?.ProcessId, continuity);
         if (target is not null && !await _activateTarget(target).ConfigureAwait(false))
         {
             _clipboard.Write(resolved.Text);
@@ -167,7 +181,7 @@ public sealed class ClipboardInjector : IInjector
 
         lock (_gate)
         {
-            _lastInserted = resolved;
+            _lastInserted = (resolved, _clock.GetTimestamp());
         }
 
         return restore;

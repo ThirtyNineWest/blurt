@@ -139,4 +139,19 @@ public sealed class HookEventReducerTests
     {
         HookEventReducer.AltGrFakeControlScanCode.Should().Be(0x21D);
     }
+
+    [TestCase(HookEventReducer.WmKeyDown, 0x41, 0u, true)]
+    [TestCase(HookEventReducer.WmSysKeyDown, 0x41, 0u, true)]
+    [TestCase(HookEventReducer.WmKeyUp, 0x41, 0u, false)]
+    [TestCase(HookEventReducer.WmKeyDown, 0xA3, 0u, false)]
+    public void HardwareKeyDownIsADownOfAnyKeyButTheTriggerThatBlurtDidNotInject(int message, int vk, uint unused, bool expected)
+    {
+        HookEventReducer.IsHardwareKeyDown(message, vk, 0, triggerKeyCode: 0xA3).Should().Be(expected);
+    }
+
+    [Test]
+    public void AnInjectedKeyDownIsNotHardwareInput()
+    {
+        HookEventReducer.IsHardwareKeyDown(HookEventReducer.WmKeyDown, 0x56, HookEventReducer.InjectedTag, triggerKeyCode: 0xA3).Should().BeFalse();
+    }
 }
