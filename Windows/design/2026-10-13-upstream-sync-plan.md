@@ -1367,6 +1367,7 @@ git commit -m "feat(windows): vocabulary tab with key terms and text shortcuts"
         await harness.Injector.SetTargetAsync(Target);
 
         await harness.Injector.InsertAsync("First.", null, "Doc - Google Docs", CancellationToken.None);
+        harness.Clock.Advance(TimeSpan.FromMilliseconds(1));
         await harness.Injector.InsertAsync("Second.", null, "Doc - Google Docs", CancellationToken.None);
 
         harness.Pasted.Should().Equal("First.", "Second.");
@@ -2800,7 +2801,7 @@ with `SelectionRead.Text` only when `FocusCaptureRules.VisibleTextOrNull(selecte
 
 - [ ] **Step 3: `ICopyClipboard` on `Win32Clipboard`**: `SequenceNumber` exists; add `CurrentString()` (open, `ReadPlainText`, close; null when the clipboard cannot be opened) and `Restore(ClipboardSnapshot saved, uint ifSequenceIs)` (`if (SequenceNumber != ifSequenceIs) return; Restore(saved);`).
 
-- [ ] **Step 4: `SelectionCopy` tests** (`FakeCopyClipboard`: `SequenceNumber`, `Text`, `RestoreCount`, `Readable`; `AnswerCopy(string? copied)` returns a `Func<bool>` that writes `copied` and bumps the sequence when non-null; a `Clear()` that nulls the text and bumps the sequence). Port every Swift case with a `FakeTimeProvider`: copies and restores (text trimmed, user clipboard back); nothing copied → null and no restore; unreadable clipboard → null and `postCopy` never called; capped to `maxCharacters`; a clear followed 30 ms later by a write (use a timer on the fake clock, or have `postCopy` clear now and a `Task` write after the first poll) returns the late copy and restores; zero-width-only copy → null.
+- [ ] **Step 4: `SelectionCopy` tests** (`FakeCopyClipboard`: `SequenceNumber`, `Text`, `RestoreCount`, `Readable`; `AnswerCopy(string? copied)` returns a `Func<bool>` that writes `copied` and bumps the sequence when non-null; a `Clear()` that nulls the text and bumps the sequence). Port every Swift case (use `TimeProvider.System` and a 50 ms timeout; the polls are real 10 ms waits, as in the Swift tests): copies and restores (text trimmed, user clipboard back); nothing copied → null and no restore; unreadable clipboard → null and `postCopy` never called; capped to `maxCharacters`; a clear followed 30 ms later by a write (use a timer on the fake clock, or have `postCopy` clear now and a `Task` write after the first poll) returns the late copy and restores; zero-width-only copy → null.
 
 - [ ] **Step 5: Implement `SelectionCopy`**
 
