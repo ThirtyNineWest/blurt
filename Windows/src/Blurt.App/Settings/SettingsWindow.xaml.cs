@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Blurt.App.Services;
 using Blurt.Engine;
 
@@ -55,10 +57,23 @@ public partial class SettingsWindow : Window
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         base.OnClosing(e);
+        CommitFocusedEdit();
         if (!AllowClose)
         {
             e.Cancel = true;
             Hide();
+        }
+    }
+
+    /// <summary>
+    /// A text box still focused when the window hides has not pushed its last edit to its source;
+    /// <c>LostFocus</c> does not fire on deactivation.
+    /// </summary>
+    private static void CommitFocusedEdit()
+    {
+        if (Keyboard.FocusedElement is TextBox box)
+        {
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
         }
     }
 
