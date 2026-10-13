@@ -117,4 +117,19 @@ public sealed class TextShortcutExpanderTests
         TextShortcutExpander.Words("Mom’s address").Should().Equal("Mom", "s", "address");
         TextShortcutExpander.Words("...").Should().BeEmpty();
     }
+
+    [Test]
+    public void WordsCountEveryNumeralCategory()
+    {
+        TextShortcutExpander.Words("½ cup").Should().Equal("½", "cup");
+    }
+
+    [Test]
+    public void ATriggerWithANumeralOnlyMatchesWithTheNumeral()
+    {
+        var half = new TextShortcut("½ cup", "half a cup");
+
+        TextShortcutExpander.Expand("add a cup now", [half]).Should().Be("add a cup now");
+        TextShortcutExpander.Expand("add ½ cup now", [half]).Should().Be("add half a cup now");
+    }
 }

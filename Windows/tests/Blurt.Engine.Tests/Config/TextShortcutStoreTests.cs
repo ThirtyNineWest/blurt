@@ -91,6 +91,23 @@ public sealed class TextShortcutStoreTests
     }
 
     [Test]
+    public void AnExpansionCutInsideAnAstralCharacterIsStoredWithoutIt()
+    {
+        var store = new TextShortcutStore(new InMemorySettingsStore());
+
+        var act = () => store.Shortcuts = [new("x", new string('b', TextShortcutStore.ExpansionLimit - 1) + "😀")];
+
+        act.Should().NotThrow();
+        store.Shortcuts.Single().Expansion.Should().HaveLength(TextShortcutStore.ExpansionLimit - 1);
+    }
+
+    [Test]
+    public void AMatchKeyKeepsNumerals()
+    {
+        TextShortcutStore.MatchKey("²").Should().NotBeEmpty();
+    }
+
+    [Test]
     public void TheStoreWritesUnderItsRosterKey()
     {
         TextShortcutStore.SettingsKey.Should().Be(DefaultsKey.TextShortcuts.Key());

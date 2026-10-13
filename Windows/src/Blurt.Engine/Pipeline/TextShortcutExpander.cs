@@ -73,7 +73,7 @@ public static class TextShortcutExpander
         return result.ToString();
     }
 
-    /// <summary>The trigger's letter/digit runs (letters, marks, and digits), the only part of it the matcher reads.</summary>
+    /// <summary>The trigger's word runs (letters, marks, and numerals of every kind), the only part of it the matcher reads.</summary>
     public static IReadOnlyList<string> Words(string trigger)
     {
         ArgumentNullException.ThrowIfNull(trigger);
@@ -135,8 +135,13 @@ public static class TextShortcutExpander
     }
 
     private static bool IsWordRune(Rune rune) =>
-        Rune.IsLetterOrDigit(rune)
-        || Rune.GetUnicodeCategory(rune) is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.EnclosingMark;
+        Rune.IsLetter(rune)
+        || Rune.GetUnicodeCategory(rune) is UnicodeCategory.NonSpacingMark
+            or UnicodeCategory.SpacingCombiningMark
+            or UnicodeCategory.EnclosingMark
+            or UnicodeCategory.DecimalDigitNumber
+            or UnicodeCategory.LetterNumber
+            or UnicodeCategory.OtherNumber;
 
     /// <summary>The regex body for one trigger, or null for a trigger with no letters or digits.</summary>
     private static string? Pattern(string trigger)

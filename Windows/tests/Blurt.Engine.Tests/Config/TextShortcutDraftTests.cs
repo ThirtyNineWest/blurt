@@ -32,4 +32,13 @@ public sealed class TextShortcutDraftTests
         TextShortcutDraft.ClampExpansion(new string('b', 3000)).Should().HaveLength(TextShortcutStore.ExpansionLimit);
         TextShortcutDraft.ClampTrigger("short").Should().Be("short");
     }
+
+    [Test]
+    public void AClampNeverSplitsAnAstralCharacter()
+    {
+        TextShortcutDraft.ClampTrigger(new string('a', TextShortcutStore.TriggerLimit - 1) + "😀")
+            .Should().HaveLength(TextShortcutStore.TriggerLimit - 1);
+        TextShortcutDraft.ClampExpansion(new string('b', TextShortcutStore.ExpansionLimit - 1) + "😀")
+            .Should().HaveLength(TextShortcutStore.ExpansionLimit - 1);
+    }
 }

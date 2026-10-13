@@ -20,11 +20,25 @@ public static class TextShortcutDraft
         return key.Length > 0 && otherKeys.Contains(key);
     }
 
-    /// <summary>Returns <paramref name="trigger"/> cut to <see cref="TextShortcutStore.TriggerLimit"/> characters.</summary>
-    public static string ClampTrigger(string trigger) =>
-        trigger.Length > TextShortcutStore.TriggerLimit ? trigger[..TextShortcutStore.TriggerLimit] : trigger;
+    /// <summary>
+    /// Returns <paramref name="trigger"/> cut to at most <see cref="TextShortcutStore.TriggerLimit"/> UTF-16
+    /// units, never ending inside a surrogate pair.
+    /// </summary>
+    public static string ClampTrigger(string trigger) => Clamp(trigger, TextShortcutStore.TriggerLimit);
 
-    /// <summary>Returns <paramref name="expansion"/> cut to <see cref="TextShortcutStore.ExpansionLimit"/> characters.</summary>
-    public static string ClampExpansion(string expansion) =>
-        expansion.Length > TextShortcutStore.ExpansionLimit ? expansion[..TextShortcutStore.ExpansionLimit] : expansion;
+    /// <summary>
+    /// Returns <paramref name="expansion"/> cut to at most <see cref="TextShortcutStore.ExpansionLimit"/> UTF-16
+    /// units, never ending inside a surrogate pair.
+    /// </summary>
+    public static string ClampExpansion(string expansion) => Clamp(expansion, TextShortcutStore.ExpansionLimit);
+
+    private static string Clamp(string text, int limit)
+    {
+        if (text.Length <= limit)
+        {
+            return text;
+        }
+
+        return char.IsHighSurrogate(text[limit - 1]) ? text[..(limit - 1)] : text[..limit];
+    }
 }
