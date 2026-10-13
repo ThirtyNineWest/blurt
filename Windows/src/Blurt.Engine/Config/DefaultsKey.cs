@@ -41,6 +41,21 @@ public enum DefaultsKey
 
     /// <summary>When the update check last ran.</summary>
     LastUpdateCheck,
+
+    /// <summary>The JSON list of spoken-phrase → text expansions.</summary>
+    TextShortcuts,
+
+    /// <summary>The experimental read-selection-aloud switch.</summary>
+    SelectionSpeech,
+
+    /// <summary>Read-aloud's playback speed.</summary>
+    ReadAloudSpeed,
+
+    /// <summary>Whether read-aloud rewrites the text for listening first.</summary>
+    ReadAloudSkipsJargon,
+
+    /// <summary>Whether a hold over a selection asks about it.</summary>
+    SelectionAsk,
 }
 
 /// <summary>Key composition for <see cref="DefaultsKey"/>.</summary>

@@ -25,7 +25,7 @@ public sealed class DefaultsKeyTests
         DefaultsKeys.All.Select(k => k.RawValue()).Should().Equal(
             "TriggerKeyCode", "TriggerActivation", "SoundPack", "KeyTerms", "DeveloperMode", "EnhancedTranscripts",
             "CustomStyle", "StyleProfiles", "ActiveStyleProfile", "OverlayCustomOriginX", "OverlayCustomOriginY",
-            "LastUpdateCheck");
+            "LastUpdateCheck", "TextShortcuts", "SelectionSpeech", "ReadAloudSpeed", "ReadAloudSkipsJargon", "SelectionAsk");
     }
 
     [Test]

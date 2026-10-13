@@ -49,5 +49,6 @@ public sealed class PersistedSettingsTests
         OverlayOriginStore.XSettingsKey.Should().Be(DefaultsKey.OverlayCustomOriginX.Key());
         OverlayOriginStore.YSettingsKey.Should().Be(DefaultsKey.OverlayCustomOriginY.Key());
         LastUpdateCheckStore.SettingsKey.Should().Be(DefaultsKey.LastUpdateCheck.Key());
+        TextShortcutStore.SettingsKey.Should().Be(DefaultsKey.TextShortcuts.Key());
     }
 }
