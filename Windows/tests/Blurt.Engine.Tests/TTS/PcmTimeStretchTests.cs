@@ -40,7 +40,7 @@ public sealed class PcmTimeStretchTests
     }
 
     [Test]
-    public void ChunkedInputProducesTheSameLengthAsOneShot()
+    public void ChunkedInputProducesTheSameOutputAsOneShot()
     {
         var input = Tone(300, seconds: 1.5);
         var oneShot = new PcmTimeStretch(rate: 1.5);
@@ -48,14 +48,26 @@ public sealed class PcmTimeStretchTests
 
         var whole = Concat(oneShot.Process(input), oneShot.Flush());
         var pieces = new List<byte[]>();
-        foreach (var chunk in input.Chunk(1_000))
+        foreach (var chunk in input.Chunk(1_001))
         {
             pieces.Add(chunked.Process(chunk));
         }
 
         pieces.Add(chunked.Flush());
 
-        Concat(pieces.ToArray()).Length.Should().BeCloseTo(whole.Length, delta: 480 * 2);
+        Concat(pieces.ToArray()).Should().Equal(whole);
+    }
+
+    [Test]
+    public void RateOneReassemblesSamplesSplitAcrossChunks()
+    {
+        var stretch = new PcmTimeStretch(rate: 1);
+        var input = Tone(440, seconds: 0.5);
+
+        var pieces = input.Chunk(1_001).Select(stretch.Process).ToList();
+        pieces.Add(stretch.Flush());
+
+        Concat(pieces.ToArray()).Should().Equal(input);
     }
 
     [Test]
@@ -69,10 +81,21 @@ public sealed class PcmTimeStretchTests
     }
 
     [Test]
-    public void ARateAtOrBelowZeroIsRefused()
+    public void ARateThatIsNotPositiveAndFiniteIsRefused()
     {
         FluentActions.Invoking(() => new PcmTimeStretch(rate: 0)).Should().Throw<ArgumentOutOfRangeException>();
+        FluentActions.Invoking(() => new PcmTimeStretch(rate: -1)).Should().Throw<ArgumentOutOfRangeException>();
         FluentActions.Invoking(() => new PcmTimeStretch(rate: double.NaN)).Should().Throw<ArgumentOutOfRangeException>();
+        FluentActions.Invoking(() => new PcmTimeStretch(rate: double.PositiveInfinity)).Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Test]
+    public void ABadGeometryNamesTheOffendingParameter()
+    {
+        FluentActions.Invoking(() => new PcmTimeStretch(rate: 2, frameSize: 480, synthesisHop: 300))
+            .Should().Throw<ArgumentOutOfRangeException>().WithParameterName("synthesisHop");
+        FluentActions.Invoking(() => new PcmTimeStretch(rate: 2, searchRange: 241))
+            .Should().Throw<ArgumentOutOfRangeException>().WithParameterName("searchRange");
     }
 
     private static byte[] Tone(double hz, double seconds)

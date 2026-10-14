@@ -20,6 +20,10 @@ public sealed class PcmTimeStretch
     private readonly List<short> _input = [];
     private short[]? _tail;
 
+    // The first byte of a sample split across Process calls. Dropping it would misalign every
+    // later sample in the stream.
+    private byte? _pendingByte;
+
     // Nominal analysis position of the next frame, relative to _input[0]. Trimming n samples
     // from the front of _input must subtract exactly n here.
     private double _position;
@@ -37,9 +41,14 @@ public sealed class PcmTimeStretch
             throw new ArgumentOutOfRangeException(nameof(rate), rate, "The rate must be a positive finite number.");
         }
 
-        if (synthesisHop <= 0 || synthesisHop * 2 > frameSize || searchRange < 0 || searchRange > synthesisHop)
+        if (synthesisHop <= 0 || synthesisHop * 2 > frameSize)
         {
-            throw new ArgumentOutOfRangeException(nameof(frameSize), "Expected 0 <= searchRange <= synthesisHop and 0 < 2 * synthesisHop <= frameSize.");
+            throw new ArgumentOutOfRangeException(nameof(synthesisHop), synthesisHop, "Expected 0 < 2 * synthesisHop <= frameSize.");
+        }
+
+        if (searchRange < 0 || searchRange > synthesisHop)
+        {
+            throw new ArgumentOutOfRangeException(nameof(searchRange), searchRange, "Expected 0 <= searchRange <= synthesisHop.");
         }
 
         Rate = rate;
@@ -58,8 +67,10 @@ public sealed class PcmTimeStretch
 
     /// <summary>
     /// Feeds <paramref name="pcm"/> and returns every output sample that can be produced so far.
-    /// At rate 1 returns <paramref name="pcm"/> itself. Otherwise a trailing odd byte is dropped,
-    /// and the result may be empty while the stretcher waits for a full frame plus search window.
+    /// A sample split across calls is joined: a trailing odd byte is held and prefixed to the next
+    /// call's input. At rate 1 returns the whole samples received, which is <paramref name="pcm"/>
+    /// itself when no byte is held and its length is even. Otherwise the result may be empty while
+    /// the stretcher waits for a full frame plus search window.
     /// </summary>
     /// <param name="pcm">16-bit little-endian mono PCM.</param>
     /// <returns>The newly produced 16-bit little-endian mono PCM, possibly empty.</returns>
@@ -67,14 +78,15 @@ public sealed class PcmTimeStretch
     public byte[] Process(byte[] pcm)
     {
         ArgumentNullException.ThrowIfNull(pcm);
+        var aligned = TakeWholeSamples(pcm);
         if (Rate == 1)
         {
-            return pcm;
+            return aligned;
         }
 
-        for (var i = 0; i + 1 < pcm.Length; i += 2)
+        for (var i = 0; i + 1 < aligned.Length; i += 2)
         {
-            _input.Add((short)(pcm[i] | (pcm[i + 1] << 8)));
+            _input.Add((short)(aligned[i] | (aligned[i + 1] << 8)));
         }
 
         var output = new List<short>();
@@ -122,7 +134,8 @@ public sealed class PcmTimeStretch
 
     /// <summary>
     /// Returns the overlap tail of the last frame unwindowed, then resets the stretcher so it can
-    /// take a new stream. Input not yet covered by a full frame plus search window is discarded.
+    /// take a new stream. Input not yet covered by a full frame plus search window, and a held
+    /// half sample, are discarded.
     /// </summary>
     /// <returns>The tail as 16-bit little-endian mono PCM; empty at rate 1 or when no frame was produced.</returns>
     public byte[] Flush()
@@ -131,7 +144,34 @@ public sealed class PcmTimeStretch
         _tail = null;
         _input.Clear();
         _position = 0;
+        _pendingByte = null;
         return tail;
+    }
+
+    /// <summary>The held byte plus <paramref name="pcm"/>, cut to whole samples; an odd last byte becomes the held byte.</summary>
+    private byte[] TakeWholeSamples(byte[] pcm)
+    {
+        if (_pendingByte is null && pcm.Length % 2 == 0)
+        {
+            return pcm;
+        }
+
+        if (pcm.Length == 0)
+        {
+            return pcm;
+        }
+
+        var held = _pendingByte is null ? 0 : 1;
+        var total = held + pcm.Length;
+        var aligned = new byte[total & ~1];
+        if (held == 1)
+        {
+            aligned[0] = _pendingByte!.Value;
+        }
+
+        pcm.AsSpan(0, aligned.Length - held).CopyTo(aligned.AsSpan(held));
+        _pendingByte = total % 2 == 1 ? pcm[^1] : null;
+        return aligned;
     }
 
     // Rounds half up so the result shifts by exactly n when _position does, unlike banker's rounding.
