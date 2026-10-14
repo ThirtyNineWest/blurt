@@ -154,7 +154,8 @@ public partial class App : Application
         var settingsWindow = new SettingsWindow(
             new SettingsViewModel(settings, dictation, styles, updates, log, apiKey, vocabulary, new ExperimentalViewModel(settings, dictation, coordinator)),
             new InstallReset(settings.Store, apiKey, log),
-            RestartAfterReset);
+            RestartAfterReset,
+            coordinator.ReadAloudSettingsChanged);
         _settingsWindow = settingsWindow;
 
         var tray = new TrayIcon(settings.TriggerKey, settings.TriggerActivation);

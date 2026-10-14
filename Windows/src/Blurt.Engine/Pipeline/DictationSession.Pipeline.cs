@@ -189,6 +189,7 @@ public sealed partial class DictationSession
 
             context = _pressContext?.Resolved;
             handsBack = _handsBackTranscript;
+            // A hand-back transcript was never typed anywhere, so it never joins the ring that primes later dictations.
             if (!handsBack)
             {
                 // A dictation into a secure field is pasted but never remembered: history is replayed

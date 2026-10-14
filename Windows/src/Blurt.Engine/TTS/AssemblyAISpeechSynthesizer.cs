@@ -36,7 +36,7 @@ public abstract record SpeechFrame
 /// </summary>
 /// <param name="apiKeyProvider">Returns the saved API key, or null when none is saved.</param>
 /// <param name="connect">Opens the socket; production passes <see cref="ClientWebSocketSpeechSocket.ConnectAsync"/>.</param>
-/// <param name="receiveTimeout">How long a single receive may wait before the exchange fails as timed out. Defaults to 10 seconds.</param>
+/// <param name="receiveTimeout">How long the connect or a single receive may wait before the exchange fails as timed out. Defaults to 10 seconds.</param>
 public sealed class AssemblyAISpeechSynthesizer(
     Func<string?> apiKeyProvider,
     SpeechSocketConnector connect,
@@ -73,7 +73,7 @@ public sealed class AssemblyAISpeechSynthesizer(
     /// abandoning the enumeration, closes the socket abruptly.
     /// </summary>
     /// <exception cref="BlurtException">No API key is saved (<see cref="BlurtError.ApiKeyMissing"/>), thrown before any socket opens.</exception>
-    /// <exception cref="SpeechSynthesisException">The service reported an error, or went silent past the receive timeout.</exception>
+    /// <exception cref="SpeechSynthesisException">The service reported an error, or did not connect or went silent within the receive timeout.</exception>
     /// <exception cref="WebSocketException">The socket closed or failed before every segment was acknowledged.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
     public async IAsyncEnumerable<byte[]> Synthesize(string text, [EnumeratorCancellation] CancellationToken ct = default)
@@ -91,7 +91,7 @@ public sealed class AssemblyAISpeechSynthesizer(
             throw new BlurtException(new BlurtError.ApiKeyMissing());
         }
 
-        var socket = await _connect(Url, apiKey, ct);
+        var socket = await ConnectAsync(apiKey, ct);
         using var registration = ct.Register(() => socket.Close(normally: false));
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var chunks = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
@@ -186,6 +186,21 @@ public sealed class AssemblyAISpeechSynthesizer(
 
         var codeText = code.ValueKind == JsonValueKind.String ? code.GetString() : code.GetRawText();
         return new SpeechFrame.Error($"({codeText}) {reason}");
+    }
+
+    /// <summary>Opens the socket within the receive timeout; a connect that outlasts it fails as <see cref="SpeechSynthesisFailure.TimedOut"/>.</summary>
+    private async Task<ISpeechSocket> ConnectAsync(string apiKey, CancellationToken ct)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(_receiveTimeout);
+        try
+        {
+            return await _connect(Url, apiKey, deadline.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new SpeechSynthesisException(new SpeechSynthesisFailure.TimedOut());
+        }
     }
 
     /// <summary>

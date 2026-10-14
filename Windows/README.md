@@ -114,7 +114,7 @@ The port tracks upstream v0.1.62 (`Directory.Build.props` `Version`). The design
 - **Text shortcuts.** Settings → Vocabulary holds a list of phrases and their replacements,
   expanded in the pasted text. The expansion never goes to AssemblyAI: the service still hears and
   returns the spoken phrase.
-- **Key terms moved.** The key terms box now lives in Settings → Vocabulary, beside the shortcuts.
+- **Key terms box added.** Settings → Vocabulary has a new key terms box, beside the shortcuts.
 - **Separator fix.** Dictating twice into the same window no longer adds the separator space when
   you typed or clicked in between. Blurt notices your input through its keyboard hook and a new
   mouse hook, and ignores its own pastes.

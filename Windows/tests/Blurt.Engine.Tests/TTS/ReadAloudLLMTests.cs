@@ -205,6 +205,21 @@ public sealed class ReadAloudLLMTests
     }
 
     [Test]
+    public async Task AStalledAnswerTimesOut()
+    {
+        var hold = new TaskCompletionSource();
+        var transport = new FakeHttpTransport { Hold = hold };
+        var llm = new ReadAloudLLM(() => "raw-key", transport, answerTimeout: TimeSpan.FromMilliseconds(50));
+        using var caller = new CancellationTokenSource();
+
+        var failure = await FailureOf(() => llm.AnswerAsync("Explain.", "x", caller.Token));
+
+        failure.Should().Be(new ReadAloudLLMFailure.TimedOut());
+        caller.IsCancellationRequested.Should().BeFalse();
+        hold.SetResult();
+    }
+
+    [Test]
     public async Task ACancelledCallerTokenPropagatesAsCancellationNotATimeout()
     {
         var hold = new TaskCompletionSource();

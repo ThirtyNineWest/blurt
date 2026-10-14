@@ -197,6 +197,24 @@ public sealed class AssemblyAISpeechSynthesizerExchangeTests
     }
 
     [Test]
+    public async Task AConnectThatNeverCompletesTimesOut()
+    {
+        var synth = new AssemblyAISpeechSynthesizer(
+            () => "k",
+            async (_, _, ct) =>
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+                return new FakeSpeechSocket(FakeSpeechSocket.Service());
+            },
+            TimeSpan.FromMilliseconds(50));
+
+        var consume = async () => await Collect(synth.Synthesize("Say something here.", CancellationToken.None));
+
+        (await consume.Should().ThrowAsync<SpeechSynthesisException>())
+            .Which.Failure.Should().Be(new SpeechSynthesisFailure.TimedOut());
+    }
+
+    [Test]
     public async Task BeginWordBoundariesAndEmptyAudioDoNotCountAsAudioOrAcks()
     {
         var socket = new FakeSpeechSocket(command =>

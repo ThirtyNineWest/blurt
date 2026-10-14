@@ -16,17 +16,20 @@ public partial class SettingsWindow : Window
     private readonly SettingsViewModel _model;
     private readonly InstallReset _reset;
     private readonly Action _restart;
+    private readonly Action _readAloudSettingsChanged;
 
     /// <summary>
     /// Creates the window over <paramref name="model"/>. A confirmed reset runs <paramref name="reset"/>
-    /// and, when every step landed, <paramref name="restart"/>.
+    /// and, when every step landed, <paramref name="restart"/>; after a partial reset it runs
+    /// <paramref name="readAloudSettingsChanged"/> so the cached read-aloud settings match the stores.
     /// </summary>
-    public SettingsWindow(SettingsViewModel model, InstallReset reset, Action restart)
+    public SettingsWindow(SettingsViewModel model, InstallReset reset, Action restart, Action readAloudSettingsChanged)
     {
         InitializeComponent();
         _model = model;
         _reset = reset;
         _restart = restart;
+        _readAloudSettingsChanged = readAloudSettingsChanged;
         DataContext = model;
         Title = $"{HostIdentity.Current.ProductName} Settings";
         Advanced.ResetConfirmed += OnResetConfirmed;
@@ -81,6 +84,7 @@ public partial class SettingsWindow : Window
     {
         if (_reset.Run() is { } alert)
         {
+            _readAloudSettingsChanged();
             MessageBox.Show(this, alert.Message, alert.Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

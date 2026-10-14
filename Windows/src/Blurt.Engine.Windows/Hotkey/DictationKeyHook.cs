@@ -164,7 +164,7 @@ public sealed class DictationKeyHook : IDisposable
     }
 
     /// <summary>
-    /// Clears the gate after a read-aloud that ended on its own; no recording is discarded, so nothing is reported.
+    /// Clears the gate without reporting a discarded recording. No capture is discarded, so nothing is reported.
     /// </summary>
     public void ResetGate()
     {

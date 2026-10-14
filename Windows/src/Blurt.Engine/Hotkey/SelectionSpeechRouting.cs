@@ -257,7 +257,7 @@ public abstract record RoutingAction
     /// <summary>A dictation ended without a key event: the hook's terminal-phase sync.</summary>
     public static readonly RoutingAction SyncGateAfterSession = new SyncGateAfterSessionAction();
 
-    /// <summary>A read ended on its own: clear the gate with no recording discarded.</summary>
+    /// <summary>Clears the gate without reporting a discarded recording.</summary>
     public static readonly RoutingAction ResetGate = new ResetGateAction();
 
     private RoutingAction()
