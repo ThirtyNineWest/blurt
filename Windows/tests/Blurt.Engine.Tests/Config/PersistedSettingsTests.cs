@@ -50,5 +50,9 @@ public sealed class PersistedSettingsTests
         OverlayOriginStore.YSettingsKey.Should().Be(DefaultsKey.OverlayCustomOriginY.Key());
         LastUpdateCheckStore.SettingsKey.Should().Be(DefaultsKey.LastUpdateCheck.Key());
         TextShortcutStore.SettingsKey.Should().Be(DefaultsKey.TextShortcuts.Key());
+        SelectionSpeechStore.SettingsKey.Should().Be(DefaultsKey.SelectionSpeech.Key());
+        SelectionAskStore.SettingsKey.Should().Be(DefaultsKey.SelectionAsk.Key());
+        ReadAloudStyleStore.SpeedSettingsKey.Should().Be(DefaultsKey.ReadAloudSpeed.Key());
+        ReadAloudStyleStore.SkipsJargonSettingsKey.Should().Be(DefaultsKey.ReadAloudSkipsJargon.Key());
     }
 }
