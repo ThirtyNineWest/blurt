@@ -312,10 +312,10 @@ public sealed class SessionHarness : IAsyncDisposable
     public static SessionHarness WithTranscriberError(Exception error, StubFocusCapture? focus = null) =>
         new(transcriber: new StubTranscriber { ErrorToThrow = error }, focus: focus);
 
-    /// <summary>Runs one press, release, and wait for the terminal phase, returning that phase.</summary>
-    public async Task<PipelinePhase> DictateAsync()
+    /// <summary>Runs one press (handing the transcript back when <paramref name="handingBack"/>), release, and wait for the terminal phase, returning that phase.</summary>
+    public async Task<PipelinePhase> DictateAsync(bool handingBack = false)
     {
-        await Session.PressAsync();
+        await Session.PressAsync(handingBack);
         await Session.ReleaseAsync();
         return await Session.WaitForTerminalAsync();
     }

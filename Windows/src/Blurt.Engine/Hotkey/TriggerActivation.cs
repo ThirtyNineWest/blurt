@@ -64,6 +64,15 @@ public static class TriggerActivations
         _ => throw new ArgumentOutOfRangeException(nameof(activation), activation, null),
     };
 
+    /// <summary>The verb for pressing the key to start, lowercase for mid-sentence use: "tap" for the tap modes, "hold" for hold-only.</summary>
+    public static string StartVerb(this TriggerActivation activation) => activation == TriggerActivation.Hold ? "hold" : "tap";
+
+    /// <summary>How to finish a dictation that is recording, naming only the gestures this mode stops on.</summary>
+    public static string FinishHint(this TriggerActivation activation) => $"{StopGesture(activation)} to finish.";
+
+    /// <summary>How to stop something the trigger started that is not a dictation, such as a read-aloud.</summary>
+    public static string StopHint(this TriggerActivation activation) => $"{StopGesture(activation)} to stop.";
+
     /// <summary>
     /// Whether releasing the trigger latches the recording on (tap-to-toggle) rather than stopping it,
     /// given how long this press was held. Only presses that started the recording from idle ask — a
@@ -78,4 +87,12 @@ public static class TriggerActivations
             TriggerActivation.Hold => false,
             _ => throw new ArgumentOutOfRangeException(nameof(activation), activation, null),
         };
+
+    private static string StopGesture(TriggerActivation activation) => activation switch
+    {
+        TriggerActivation.TapOrHold => "Tap again or release",
+        TriggerActivation.Tap => "Tap again",
+        TriggerActivation.Hold => "Release",
+        _ => throw new ArgumentOutOfRangeException(nameof(activation), activation, null),
+    };
 }

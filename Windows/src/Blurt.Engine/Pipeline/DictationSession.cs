@@ -56,6 +56,7 @@ public sealed partial class DictationSession : IAsyncDisposable
     private CancellationTokenSource? _inFlightPressCts;
     private CancellationTokenSource? _autoReleaseCts;
     private PressContext? _pressContext;
+    private bool _handsBackTranscript;
     private Task<string>? _upload;
     private CancellationTokenSource? _uploadCts;
     private PipelineRun? _pipelineRun;
@@ -350,6 +351,7 @@ public sealed partial class DictationSession : IAsyncDisposable
             _ when terminal == PipelinePhase.Pasted => "pasted",
             _ when terminal == PipelinePhase.NoTarget => "copied to clipboard",
             _ when terminal == PipelinePhase.Cancelled => "cancelled",
+            PipelinePhase.HandedBackPhase => "handed back",
             PipelinePhase.FailedPhase failed => $"failed: {failed.Error.DiagnosticName}",
             _ => terminal.ToString(),
         };

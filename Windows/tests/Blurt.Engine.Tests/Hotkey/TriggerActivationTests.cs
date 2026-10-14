@@ -48,4 +48,28 @@ public sealed class TriggerActivationTests
         TriggerActivation.TapOrHold.Guidance().Should().Be(
             "Tap to start and tap again to stop, or hold the key and release to dictate.");
     }
+
+    [Test]
+    public void StartVerbIsTapForTheTapModesAndHoldForHoldOnly()
+    {
+        TriggerActivations.All.Select(mode => mode.StartVerb()).Should().Equal("tap", "tap", "hold");
+    }
+
+    [Test]
+    public void FinishHintNamesOnlyTheGesturesThisModeStopsOn()
+    {
+        TriggerActivations.All.Select(mode => mode.FinishHint()).Should().Equal(
+            "Tap again or release to finish.",
+            "Tap again to finish.",
+            "Release to finish.");
+    }
+
+    [Test]
+    public void StopHintEndsInToStopAndDiffersPerMode()
+    {
+        var hints = TriggerActivations.All.Select(mode => mode.StopHint()).ToList();
+
+        hints.Should().OnlyHaveUniqueItems();
+        hints.Should().OnlyContain(hint => hint.EndsWith(" to stop.", StringComparison.Ordinal));
+    }
 }

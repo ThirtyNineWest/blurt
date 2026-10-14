@@ -7,7 +7,7 @@ namespace Blurt.Engine.Pipeline;
 
 public sealed partial class DictationSession
 {
-    private async Task PerformPressAsync(CancellationToken pressToken)
+    private async Task PerformPressAsync(CancellationToken pressToken, bool handingBack)
     {
         lock (_gate)
         {
@@ -17,6 +17,7 @@ public sealed partial class DictationSession
             }
 
             _pressContext = null;
+            _handsBackTranscript = handingBack;
         }
 
         if (_readinessCheck() is { } blocker)

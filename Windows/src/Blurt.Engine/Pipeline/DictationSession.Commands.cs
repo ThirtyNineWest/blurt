@@ -5,7 +5,7 @@ namespace Blurt.Engine.Pipeline;
 /// <summary>A host command for <see cref="DictationSession.Submit"/>, one per session method.</summary>
 public enum Command
 {
-    /// <summary><see cref="DictationSession.PressAsync"/>.</summary>
+    /// <summary><see cref="DictationSession.PressAsync(bool)"/>.</summary>
     Press,
 
     /// <summary><see cref="DictationSession.ReleaseAsync"/>.</summary>
@@ -16,6 +16,9 @@ public enum Command
 
     /// <summary><see cref="DictationSession.CancelRecordingAsync"/>.</summary>
     CancelRecording,
+
+    /// <summary><see cref="DictationSession.PressAsync(bool)"/> with <c>handingBack</c> true: the same dictation, whose transcript ends the run as <see cref="PipelinePhase.HandedBack(string)"/> rather than being pasted.</summary>
+    PressHandingBack,
 }
 
 public sealed partial class DictationSession
@@ -40,15 +43,17 @@ public sealed partial class DictationSession
     /// Starts a dictation when the phase is terminal: refuses it with the readiness blocker, else
     /// claims <see cref="PipelinePhase.Connecting"/>, brings the mic up, and claims
     /// <see cref="PipelinePhase.Recording"/> once it is live. Completes when the press has run.
+    /// With <paramref name="handingBack"/>, the transcript ends the run as <see cref="PipelinePhase.HandedBack(string)"/>
+    /// instead of being pasted or remembered.
     /// </summary>
-    public Task PressAsync()
+    public Task PressAsync(bool handingBack = false)
     {
         var pressCts = new CancellationTokenSource();
         Task op;
         lock (_gate)
         {
             _inFlightPressCts = pressCts;
-            op = ChainLocked(() => PerformPressAsync(pressCts.Token));
+            op = ChainLocked(() => PerformPressAsync(pressCts.Token, handingBack));
         }
 
         return FinishPressAsync(op, pressCts);
@@ -119,6 +124,7 @@ public sealed partial class DictationSession
             var op = command switch
             {
                 Command.Press => PressAsync(),
+                Command.PressHandingBack => PressAsync(handingBack: true),
                 Command.Release => ReleaseAsync(),
                 Command.Cancel => CancelAsync(),
                 Command.CancelRecording => CancelRecordingAsync(),

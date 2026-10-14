@@ -35,6 +35,9 @@ public abstract record PipelinePhase
     /// <summary>The transcript had nowhere to land and was left on the clipboard. Not an error.</summary>
     public static readonly PipelinePhase NoTarget = new NoTargetPhase();
 
+    /// <summary>Returns the handed-back phase carrying the spoken <paramref name="transcript"/>.</summary>
+    public static PipelinePhase HandedBack(string transcript) => new HandedBackPhase(transcript);
+
     private PipelinePhase()
     {
     }
@@ -194,5 +197,27 @@ public abstract record PipelinePhase
         public override TrayStatus TrayStatus => TrayStatus.Idle;
 
         private protected override string CaseName => "noTarget";
+    }
+
+    /// <summary>
+    /// Transcription succeeded and the press asked for the text back instead of a paste
+    /// (<see cref="Command.PressHandingBack"/>). <paramref name="Transcript"/> is the spoken text,
+    /// before any text shortcut expands it. Terminal; presents as idle, since what happens next is the host's.
+    /// </summary>
+    public sealed record HandedBackPhase(string Transcript) : PipelinePhase
+    {
+        /// <inheritdoc/>
+        public override bool IsTerminal => true;
+
+        /// <inheritdoc/>
+        public override bool IsCapturing => false;
+
+        /// <inheritdoc/>
+        public override OverlayUIState OverlayState => OverlayUIState.Idle;
+
+        /// <inheritdoc/>
+        public override TrayStatus TrayStatus => TrayStatus.Idle;
+
+        private protected override string CaseName => "handedBack";
     }
 }

@@ -34,7 +34,7 @@ public sealed class DictationKeyGateTests
             new[]
             {
                 Down(TimeSpan.Zero),
-                Up(TimeSpan.FromMilliseconds(200), DictationKeyGate.Action.None),
+                Up(TimeSpan.FromMilliseconds(200), DictationKeyGate.Action.Latch),
                 Down(TimeSpan.FromSeconds(5)),
                 Up(TimeSpan.FromMilliseconds(5100), DictationKeyGate.Action.Stop),
             },
@@ -79,7 +79,7 @@ public sealed class DictationKeyGateTests
             new[]
             {
                 Down(TimeSpan.Zero),
-                Up(TimeSpan.FromMilliseconds(999), DictationKeyGate.Action.None),
+                Up(TimeSpan.FromMilliseconds(999), DictationKeyGate.Action.Latch),
                 Down(TimeSpan.FromSeconds(5)),
                 Up(TimeSpan.FromMilliseconds(5100), DictationKeyGate.Action.Stop),
             },
@@ -153,7 +153,7 @@ public sealed class DictationKeyGateTests
             new[]
             {
                 Down(TimeSpan.Zero, DictationKeyGate.Action.Start),
-                Up(TimeSpan.FromMilliseconds(1200), DictationKeyGate.Action.None),
+                Up(TimeSpan.FromMilliseconds(1200), DictationKeyGate.Action.Latch),
                 Down(TimeSpan.FromSeconds(5), DictationKeyGate.Action.None),
                 Up(TimeSpan.FromMilliseconds(5100), DictationKeyGate.Action.Stop),
             },
@@ -163,7 +163,7 @@ public sealed class DictationKeyGateTests
             new[]
             {
                 Down(TimeSpan.Zero, DictationKeyGate.Action.Start),
-                Up(TimeSpan.FromMilliseconds(200), DictationKeyGate.Action.None),
+                Up(TimeSpan.FromMilliseconds(200), DictationKeyGate.Action.Latch),
                 Down(TimeSpan.FromSeconds(2), DictationKeyGate.Action.None),
                 Up(TimeSpan.FromMilliseconds(2100), DictationKeyGate.Action.Stop),
             },

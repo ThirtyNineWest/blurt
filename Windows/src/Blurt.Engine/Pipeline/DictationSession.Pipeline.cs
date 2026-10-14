@@ -178,7 +178,8 @@ public sealed partial class DictationSession
 
         var now = _clock.GetUtcNow();
         TranscriptionContext? context;
-        RecentDictations snapshot;
+        RecentDictations? snapshot = null;
+        bool handsBack;
         lock (_gate)
         {
             if (!IsLiveLocked(run, PipelinePhase.Transcribing))
@@ -187,22 +188,32 @@ public sealed partial class DictationSession
             }
 
             context = _pressContext?.Resolved;
-
-            // A dictation into a secure field is pasted but never remembered: history is replayed
-            // as request context on every later dictation, in any app.
-            if (context?.TargetIsSecure != true)
+            handsBack = _handsBackTranscript;
+            if (!handsBack)
             {
-                _recent.Record(trimmed, spoken, style, now);
+                // A dictation into a secure field is pasted but never remembered: history is replayed
+                // as request context on every later dictation, in any app.
+                if (context?.TargetIsSecure != true)
+                {
+                    _recent.Record(trimmed, spoken, style, now);
+                }
+
+                snapshot = _recent.Snapshot();
             }
 
-            snapshot = _recent.Snapshot();
             _delivered = new DeliveredTranscript(text.Length, context?.AppName);
         }
 
         _log.Append(text, context);
+        if (handsBack)
+        {
+            TryAdvance(run, PipelinePhase.Transcribing, PipelinePhase.HandedBack(spoken));
+            return;
+        }
+
         try
         {
-            _onTranscriptDelivered?.Invoke(trimmed, snapshot);
+            _onTranscriptDelivered?.Invoke(trimmed, snapshot!);
         }
         catch (Exception ex)
         {

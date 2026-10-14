@@ -127,6 +127,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
             onStart: () => session.Submit(Command.Press),
             onStop: () => session.Submit(Command.Release),
             onCancel: () => session.Submit(Command.Cancel),
+            onLatch: static () => { },
             onRecordingDiscarded: () => session.Submit(Command.CancelRecording),
             onHardwareKeyDown: _components.UserInput.Touch);
         Session.PhaseChanged += OnPhaseChanged;

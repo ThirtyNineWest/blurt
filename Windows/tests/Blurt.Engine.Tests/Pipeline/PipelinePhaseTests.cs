@@ -17,6 +17,7 @@ public sealed class PipelinePhaseTests
         yield return new TestCaseData(PipelinePhase.Cancelled, true);
         yield return new TestCaseData(PipelinePhase.Pasted, true);
         yield return new TestCaseData(PipelinePhase.NoTarget, true);
+        yield return new TestCaseData(PipelinePhase.HandedBack("x"), true);
     }
 
     private static IEnumerable<TestCaseData> CapturingTable()
@@ -30,6 +31,7 @@ public sealed class PipelinePhaseTests
         yield return new TestCaseData(PipelinePhase.Cancelled, false);
         yield return new TestCaseData(PipelinePhase.Pasted, false);
         yield return new TestCaseData(PipelinePhase.NoTarget, false);
+        yield return new TestCaseData(PipelinePhase.HandedBack("x"), false);
     }
 
     [TestCaseSource(nameof(TerminalTable))]
@@ -66,14 +68,14 @@ public sealed class PipelinePhaseTests
         PipelinePhase[] phases =
         [
             PipelinePhase.Idle, PipelinePhase.Connecting, PipelinePhase.Recording, PipelinePhase.Transcribing,
-            PipelinePhase.Injecting, PipelinePhase.Cancelled, PipelinePhase.Pasted, PipelinePhase.NoTarget,
+            PipelinePhase.Injecting, PipelinePhase.Cancelled, PipelinePhase.Pasted, PipelinePhase.NoTarget, PipelinePhase.HandedBack("x"),
             PipelinePhase.Failed(new BlurtError.ApiKeyMissing()),
         ];
 
         var names = phases.Select(p => p.ToString());
 
         names.Should().Equal(
-            "idle", "connecting", "recording", "transcribing", "injecting", "cancelled", "pasted", "noTarget",
+            "idle", "connecting", "recording", "transcribing", "injecting", "cancelled", "pasted", "noTarget", "handedBack",
             "failed(apiKeyMissing)");
     }
 }

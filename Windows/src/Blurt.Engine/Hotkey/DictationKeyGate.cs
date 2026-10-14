@@ -30,6 +30,9 @@ public struct DictationKeyGate
 
         /// <summary>Discard the recording just started: a combo, not a dictation press.</summary>
         Cancel,
+
+        /// <summary>A release that latched the recording on: a tap. Dictation keeps recording; read-aloud's router reads it as the moment a tap is known.</summary>
+        Latch,
     }
 
     private enum Phase
@@ -110,7 +113,7 @@ public struct DictationKeyGate
         if (_fromIdle && Activation.LatchesOnRelease(now - _downAt, HoldThreshold))
         {
             _phase = Phase.Latched;
-            return Action.None;
+            return Action.Latch;
         }
 
         _phase = Phase.Idle;

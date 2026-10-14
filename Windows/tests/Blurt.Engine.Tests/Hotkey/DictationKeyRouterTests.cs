@@ -86,7 +86,7 @@ public sealed class DictationKeyRouterTests
         var router = new DictationKeyRouter(Trigger);
 
         router.Handle(DownEvent(Trigger), TimeSpan.Zero).Should().Be(DictationKeyGate.Action.Start);
-        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.None); // latched
+        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.Latch); // latched
         router.Handle(DownEvent(Trigger), TimeSpan.FromSeconds(5)).Should().Be(DictationKeyGate.Action.None);
         router.Handle(UpEvent(Trigger), TimeSpan.FromSeconds(5) + TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.Stop);
     }
@@ -121,7 +121,7 @@ public sealed class DictationKeyRouterTests
     {
         var router = new DictationKeyRouter(Trigger);
         router.Handle(DownEvent(Trigger), TimeSpan.Zero).Should().Be(DictationKeyGate.Action.Start);
-        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.None); // latched
+        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.Latch); // latched
 
         var discarded = router.Reset();
 
@@ -138,7 +138,7 @@ public sealed class DictationKeyRouterTests
         // it; this pins that a reset genuinely restores the next press.
         var router = new DictationKeyRouter(Trigger);
         router.Handle(DownEvent(Trigger), TimeSpan.Zero).Should().Be(DictationKeyGate.Action.Start);
-        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.None); // latched
+        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(200)).Should().Be(DictationKeyGate.Action.Latch); // latched
 
         // Without the reset, this next tap is swallowed — the exact dead press.
         var swallowed = router;
@@ -269,7 +269,7 @@ public sealed class DictationKeyRouterTests
         // latched — the state most at risk of being stranded, since nothing is coming to close it.
         var router = new DictationKeyRouter(Trigger);
         router.Handle(DownEvent(Trigger), TimeSpan.Zero).Should().Be(DictationKeyGate.Action.Start);
-        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(100)).Should().Be(DictationKeyGate.Action.None); // latched
+        router.Handle(UpEvent(Trigger), TimeSpan.FromMilliseconds(100)).Should().Be(DictationKeyGate.Action.Latch); // latched
 
         var discarded = router.RecoverFromDroppedEvents(triggerStillHeld: false);
 

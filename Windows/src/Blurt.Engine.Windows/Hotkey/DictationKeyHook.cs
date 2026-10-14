@@ -24,6 +24,7 @@ public sealed class DictationKeyHook : IDisposable
     private readonly Action _onStart;
     private readonly Action _onStop;
     private readonly Action _onCancel;
+    private readonly Action _onLatch;
     private readonly Action _onRecordingDiscarded;
     private readonly Action? _onHardwareKeyDown;
     private readonly TimeProvider _clock;
@@ -35,6 +36,7 @@ public sealed class DictationKeyHook : IDisposable
     private bool _hasLoggedInstallFailure;
 
     /// <summary>Creates the hook seeded from the persisted binding; nothing is installed until <see cref="EnsureRunning"/>.</summary>
+    /// <param name="onLatch">Invoked when a release latches the recording on: a tap.</param>
     /// <param name="onRecordingDiscarded">
     /// Invoked when a state reset (rebinding, terminal-phase sync) discards a live gate state whose
     /// ending key events can no longer arrive, so the owner must cancel the recording.
@@ -49,6 +51,7 @@ public sealed class DictationKeyHook : IDisposable
         Action onStart,
         Action onStop,
         Action onCancel,
+        Action onLatch,
         Action onRecordingDiscarded,
         Action? onHardwareKeyDown = null,
         TimeProvider? clock = null)
@@ -58,6 +61,7 @@ public sealed class DictationKeyHook : IDisposable
         _onStart = onStart;
         _onStop = onStop;
         _onCancel = onCancel;
+        _onLatch = onLatch;
         _onRecordingDiscarded = onRecordingDiscarded;
         _onHardwareKeyDown = onHardwareKeyDown;
         _clock = clock ?? TimeProvider.System;
@@ -160,6 +164,17 @@ public sealed class DictationKeyHook : IDisposable
     }
 
     /// <summary>
+    /// Clears the gate after a read-aloud that ended on its own; no recording is discarded, so nothing is reported.
+    /// </summary>
+    public void ResetGate()
+    {
+        lock (_routerGate)
+        {
+            _router.Reset();
+        }
+    }
+
+    /// <summary>
     /// Reduces one raw hook delivery and routes it at the current elapsed time. This is the handler
     /// the installed hook calls.
     /// </summary>
@@ -234,6 +249,9 @@ public sealed class DictationKeyHook : IDisposable
                 break;
             case DictationKeyGate.Action.Cancel:
                 _onCancel();
+                break;
+            case DictationKeyGate.Action.Latch:
+                _onLatch();
                 break;
             case DictationKeyGate.Action.None:
                 break;

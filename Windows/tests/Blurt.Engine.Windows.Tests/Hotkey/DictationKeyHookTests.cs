@@ -37,6 +37,7 @@ public sealed class DictationKeyHookTests
         () => _calls.Add("start"),
         () => _calls.Add("stop"),
         () => _calls.Add("cancel"),
+        () => _calls.Add("latch"),
         () => _calls.Add("discarded"),
         onHardwareKeyDown: () => _calls.Add("input"),
         clock: _clock);
@@ -66,7 +67,7 @@ public sealed class DictationKeyHookTests
         _hook.Dispatch(Down(), At(3));
         _hook.Dispatch(Up(), At(3.2));
 
-        _calls.Should().Equal("start", "stop");
+        _calls.Should().Equal("start", "latch", "stop");
     }
 
     [Test]
@@ -155,7 +156,7 @@ public sealed class DictationKeyHookTests
         _hook.Dispatch(Down(), At(0));
         _hook.Dispatch(Up(), At(5));
 
-        _calls.Should().Equal("start");
+        _calls.Should().Equal("start", "latch");
     }
 
     [Test]
@@ -167,7 +168,7 @@ public sealed class DictationKeyHookTests
         _hook.SyncAfterTerminalPhase();
         _hook.Dispatch(Down(), At(5));
 
-        _calls.Should().Equal("start", "discarded", "start");
+        _calls.Should().Equal("start", "latch", "discarded", "start");
     }
 
     [Test]
@@ -195,7 +196,7 @@ public sealed class DictationKeyHookTests
         _clock.Advance(TimeSpan.FromMilliseconds(200));
         _hook.HandleRawKey(HookEventReducer.WmKeyUp, RightControl, ControlScanCode, HookEventReducer.LlkhfUp, 0);
 
-        _calls.Should().Equal("start");
+        _calls.Should().Equal("start", "latch");
     }
 
     [Test]
@@ -230,5 +231,30 @@ public sealed class DictationKeyHookTests
     public void ANewHookIsNotInstalled()
     {
         _hook.IsInstalled.Should().BeFalse();
+    }
+
+    [Test]
+    public void ATapReportsALatchAndAHoldDoesNot()
+    {
+        _hook.Dispatch(Down(), At(0));
+        _hook.Dispatch(Up(), At(0.2));
+        _hook.Dispatch(Down(), At(3));
+        _hook.Dispatch(Up(), At(3.2));
+        _hook.Dispatch(Down(), At(5));
+        _hook.Dispatch(Up(), At(6.5));
+
+        _calls.Should().Equal("start", "latch", "stop", "start", "stop");
+    }
+
+    [Test]
+    public void ResetGateClearsALatchWithoutReportingADiscard()
+    {
+        _hook.Dispatch(Down(), At(0));
+        _hook.Dispatch(Up(), At(0.2));
+
+        _hook.ResetGate();
+        _hook.Dispatch(Down(), At(3));
+
+        _calls.Should().Equal("start", "latch", "start");
     }
 }
