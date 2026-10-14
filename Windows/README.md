@@ -183,9 +183,12 @@ tracked for later work:
 - No caret-anchored overlay placement (UIA `TextPattern` bounding rectangles) and no per-monitor
   DPI/multi-monitor placement polish yet; the overlay defaults to bottom-center of the primary
   screen.
-- Read-aloud (experimental) reads a selection through UI Automation. An app that exposes no UIA
-  text falls back to sending Ctrl+C, so it needs a working Ctrl+C, and an app that copies the
-  current line on an empty Ctrl+C would read that line aloud.
+- Read-aloud (experimental) reads a selection through UI Automation. When UI Automation cannot
+  reach a focused element at all, read-aloud falls back to sending Ctrl+C, so that app needs a
+  working Ctrl+C; a bare caret or a password field never triggers the fallback. An app that copies
+  the current line on an empty Ctrl+C would read that line aloud.
+- The streaming text-to-speech endpoint read-aloud uses is undocumented by AssemblyAI and may
+  change without notice.
 - No installer (MSIX or Inno Setup), no code signing, and no release workflow yet —
   `scripts/windows/publish.ps1` output is the deliverable for this cut.
 

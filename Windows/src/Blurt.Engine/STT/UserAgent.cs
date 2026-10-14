@@ -3,7 +3,7 @@ namespace Blurt.Engine.STT;
 /// <summary>
 /// The <c>User-Agent</c> every AssemblyAI request carries: the host's product name, the build's
 /// <c>major.minor.build</c> version, and a comment naming the OS, plus <c>dev</c> for any
-/// non-release build, e.g. <c>Blurt/0.1.56 (Windows 10.0.26200; dev)</c>. It carries nothing
+/// non-release build, e.g. <c>Blurt/0.1.62 (Windows 10.0.26200; dev)</c>. It carries nothing
 /// per-install and no locale or language.
 /// </summary>
 public static class UserAgent

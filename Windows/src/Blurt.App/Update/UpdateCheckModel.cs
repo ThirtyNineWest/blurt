@@ -61,7 +61,7 @@ public sealed class UpdateCheckModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>"Blurt 0.1.56", or the bare product name when the version is unknown.</summary>
+    /// <summary>"Blurt 0.1.62", or the bare product name when the version is unknown.</summary>
     public string VersionLabel => UpdateAlertContent.AppVersionLabel(_currentVersion);
 
     /// <summary>The executing assembly's <c>Major.Minor.Build</c> version, or null when it does not parse.</summary>
