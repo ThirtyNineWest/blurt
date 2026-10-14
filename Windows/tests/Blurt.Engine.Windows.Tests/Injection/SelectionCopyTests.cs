@@ -86,6 +86,30 @@ public sealed class SelectionCopyTests
         text.Should().BeNull();
     }
 
+    [Test]
+    public async Task ACancelAfterTheCopyStillRestoresTheUsersClipboard()
+    {
+        var clipboard = new FakeCopyClipboard();
+        using var cancel = new CancellationTokenSource();
+        var answer = clipboard.AnswerCopy("copied");
+        var copy = new SelectionCopy(
+            clipboard,
+            () =>
+            {
+                var posted = answer();
+                cancel.Cancel();
+                return posted;
+            },
+            TimeSpan.FromMilliseconds(50),
+            TimeProvider.System);
+
+        var text = await copy.CopySelectionAsync(100, cancel.Token);
+
+        text.Should().Be("copied");
+        clipboard.Text.Should().Be("user's clipboard");
+        clipboard.RestoreCount.Should().Be(1);
+    }
+
     private static async Task WriteLaterAsync(FakeCopyClipboard clipboard, string text)
     {
         await Task.Delay(30);

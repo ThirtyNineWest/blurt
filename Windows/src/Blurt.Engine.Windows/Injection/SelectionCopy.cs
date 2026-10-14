@@ -45,14 +45,17 @@ public sealed class SelectionCopy : ISelectionCopy
     /// nothing visible. Never sends the copy when the clipboard cannot be snapshotted. Polls every 10 ms up to
     /// the timeout for a sequence change that comes with a string (an app may clear the clipboard and write it
     /// a moment later). The clipboard is restored whenever the copy changed it and nothing wrote after the
-    /// copy. Every clipboard call runs on a thread-pool thread.
+    /// copy. Every clipboard call runs on a thread-pool thread. <paramref name="ct"/> is honored only until the
+    /// copy is sent; a cancellation after that still waits out the poll, restores the clipboard, and returns the
+    /// copied text.
     /// </summary>
-    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled before the copy was sent.</exception>
     public Task<string?> CopySelectionAsync(int maxCharacters, CancellationToken ct) =>
         Task.Run(() => CopyAsync(maxCharacters, ct), ct);
 
     private async Task<string?> CopyAsync(int maxCharacters, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var saved = _clipboard.Snapshot();
         if (saved is null)
         {
@@ -70,7 +73,9 @@ public sealed class SelectionCopy : ISelectionCopy
         var seen = before;
         do
         {
-            await Task.Delay(PollInterval, _clock, ct).ConfigureAwait(false);
+            // Polls without the token: once the copy is sent, an early exit would skip the restore and leave the
+            // selection on the user's clipboard. The timeout bounds the loop.
+            await Task.Delay(PollInterval, _clock).ConfigureAwait(false);
             var sequence = _clipboard.SequenceNumber;
             if (sequence == before)
             {

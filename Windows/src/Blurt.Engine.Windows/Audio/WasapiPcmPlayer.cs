@@ -157,9 +157,9 @@ public sealed class WasapiPcmPlayer : IPcmSink
         var coInit = Ole32.CoInitializeEx(IntPtr.Zero, Ole32.CoinitMultithreaded);
         IAudioClient? client = null;
         IAudioRenderClient? renderClient = null;
+        var ready = new AutoResetEvent(false);
         try
         {
-            using var ready = new AutoResetEvent(false);
             var hr = Open(ready, out client, out renderClient, out var bufferFrames);
             if (hr < 0)
             {
@@ -183,6 +183,9 @@ public sealed class WasapiPcmPlayer : IPcmSink
 
             CaptureEndpoint.Release(renderClient);
             CaptureEndpoint.Release(client);
+
+            // The audio client holds this handle as its event until it is released.
+            ready.Dispose();
             Stop();
             if (coInit >= 0)
             {
