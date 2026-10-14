@@ -3,7 +3,7 @@ using Blurt.Engine.Windows.Hotkey;
 
 namespace Blurt.Engine.Windows.Injection.Interop;
 
-/// <summary>Synthesizes the Ctrl+V paste keystroke through <c>SendInput</c>.</summary>
+/// <summary>Synthesizes the Ctrl+V paste and Ctrl+C copy keystrokes through <c>SendInput</c>.</summary>
 public static partial class User32Input
 {
     /// <summary><c>INPUT_KEYBOARD</c>.</summary>
@@ -14,6 +14,7 @@ public static partial class User32Input
 
     private const ushort VkControl = 0x11;
     private const ushort VkV = 0x56;
+    private const ushort VkC = 0x43;
 
     /// <summary>The native <c>INPUT</c> structure.</summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -95,14 +96,30 @@ public static partial class User32Input
     ];
 
     /// <summary>Posts Ctrl+V to the foreground window. Returns whether all four events were inserted.</summary>
-    public static unsafe bool PostCtrlV()
+    public static bool PostCtrlV() => Send(CtrlVInputs());
+
+    private static unsafe bool Send(Input[] inputs)
     {
-        var inputs = CtrlVInputs();
         fixed (Input* pointer = inputs)
         {
             return SendInput((uint)inputs.Length, pointer, sizeof(Input)) == inputs.Length;
         }
     }
+
+    /// <summary>
+    /// Returns Ctrl down, C down, C up, Ctrl up, each tagged with <see cref="HookEventReducer.InjectedTag"/> so the
+    /// dictation keyboard hook ignores them.
+    /// </summary>
+    public static Input[] CtrlCInputs() =>
+    [
+        Key(VkControl, 0),
+        Key(VkC, 0),
+        Key(VkC, KeyEventKeyUp),
+        Key(VkControl, KeyEventKeyUp),
+    ];
+
+    /// <summary>Posts Ctrl+C to the foreground window. Returns whether all four events were inserted.</summary>
+    public static bool PostCtrlC() => Send(CtrlCInputs());
 
     [LibraryImport("user32.dll", SetLastError = true)]
     private static unsafe partial uint SendInput(uint count, Input* inputs, int size);

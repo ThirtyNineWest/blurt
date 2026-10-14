@@ -13,7 +13,7 @@ namespace Blurt.Engine.Windows.FocusCapture;
 /// Reads the foreground window through Win32 and the focused field through UI Automation. Every UI Automation call
 /// is a cross-process round trip; call these members off the UI thread of any window they may read.
 /// </summary>
-public sealed class UiaFocusCapture : IFocusCapture
+public sealed class UiaFocusCapture : IFocusCapture, ISelectionReader
 {
     private const string LogCategory = "FocusCapture";
 
@@ -124,6 +124,41 @@ public sealed class UiaFocusCapture : IFocusCapture
             && pattern is TextPattern);
 
         return FocusCaptureRules.IsEditableTarget(isEditControlType, valueSettable, hasInsertionPoint);
+    }
+
+    /// <summary>
+    /// Returns the focused element's selection, trimmed and cut to <paramref name="maxChars"/>;
+    /// <see cref="SelectionRead.None"/> for a password field, an unreadable password flag, a bare caret, or an
+    /// element with no text pattern; <see cref="SelectionRead.Unreadable"/> when no focused element can be read.
+    /// Call off the UI thread; every read is a cross-process round trip.
+    /// </summary>
+    public SelectionRead CaptureSelectedText(int maxChars)
+    {
+        var element = FocusedElement();
+        if (element is null)
+        {
+            return FieldContextRules.ClassifySelection(elementReachable: false, isPassword: null, selected: null, maxChars);
+        }
+
+        var isPassword = Read(() => (bool?)element.Current.IsPassword);
+        if (isPassword is not false)
+        {
+            return FieldContextRules.ClassifySelection(elementReachable: true, isPassword, selected: null, maxChars);
+        }
+
+        var selected = Read(() => ReadSelection(element, maxChars));
+        return FieldContextRules.ClassifySelection(elementReachable: true, isPassword, selected, maxChars);
+    }
+
+    private static string? ReadSelection(AutomationElement element, int maxChars)
+    {
+        if (!element.TryGetCurrentPattern(TextPattern.Pattern, out var pattern) || pattern is not TextPattern text)
+        {
+            return null;
+        }
+
+        var selection = text.GetSelection();
+        return selection.Length == 0 ? null : selection[0].GetText(maxChars);
     }
 
     private static AutomationElement? FocusedElement() => Read(() => AutomationElement.FocusedElement);

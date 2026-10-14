@@ -6,10 +6,10 @@ using static Blurt.Engine.Windows.Injection.Interop.User32Clipboard;
 namespace Blurt.Engine.Windows.Injection;
 
 /// <summary>
-/// <see cref="IClipboardAccess"/> over the Win32 clipboard. Every operation opens and closes the clipboard on the
+/// <see cref="IClipboardAccess"/> and <see cref="ICopyClipboard"/> over the Win32 clipboard. Every operation opens and closes the clipboard on the
 /// calling thread, retrying the open while another process holds it.
 /// </summary>
-public sealed class Win32Clipboard : IClipboardAccess
+public sealed class Win32Clipboard : IClipboardAccess, ICopyClipboard
 {
     private const string LogCategory = "Clipboard";
     private const int OpenRetries = 10;
@@ -166,6 +166,49 @@ public sealed class Win32Clipboard : IClipboardAccess
                 }
 
                 return;
+        }
+    }
+
+    /// <summary>Returns the <c>CF_UNICODETEXT</c> string, or null when the clipboard holds none or cannot be opened.</summary>
+    public string? CurrentString()
+    {
+        if (!TryOpen(out var error))
+        {
+            BlurtLog.Warn(LogCategory, $"read skipped: the clipboard could not be opened (error {error})");
+            return null;
+        }
+
+        try
+        {
+            return ReadPlainText();
+        }
+        finally
+        {
+            _ = CloseClipboard();
+        }
+    }
+
+    /// <summary>
+    /// Writes <paramref name="saved"/> back as <see cref="Restore(ClipboardSnapshot)"/> does, only when
+    /// <see cref="SequenceNumber"/> still equals <paramref name="ifSequenceIs"/>. A clipboard that cannot be opened
+    /// is logged and left as it is; never throws a <see cref="Win32Exception"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="saved"/> is null.</exception>
+    public void Restore(ClipboardSnapshot saved, uint ifSequenceIs)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        if (SequenceNumber != ifSequenceIs)
+        {
+            return;
+        }
+
+        try
+        {
+            Restore(saved);
+        }
+        catch (Win32Exception exception)
+        {
+            BlurtLog.Warn(LogCategory, $"restore after copy failed (error {exception.NativeErrorCode})");
         }
     }
 

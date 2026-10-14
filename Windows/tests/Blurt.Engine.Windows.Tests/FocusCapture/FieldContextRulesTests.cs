@@ -72,7 +72,7 @@ public sealed class FieldContextRulesTests
     [Test]
     public void AnAllInvisiblePriorReadBecomesNull()
     {
-        var context = FieldContextRules.Compose(false, true, () => null, () => null, Text("​", "​"));
+        var context = FieldContextRules.Compose(false, true, () => null, () => null, Text("\u200B", "\u200B"));
 
         context.PriorText.Should().BeNull();
         context.SelectedText.Should().BeNull();
@@ -138,4 +138,28 @@ public sealed class FieldContextRulesTests
 
         context.Should().Be(expected);
     }
+
+    [Test]
+    public void AnUnreachableElementIsUnreadable() =>
+        FieldContextRules.ClassifySelection(elementReachable: false, isPassword: null, selected: null, maxChars: 100)
+            .Should().Be(SelectionRead.Unreadable);
+
+    [TestCase(null)]
+    [TestCase(true)]
+    public void AnUnreadablePasswordFlagOrAPasswordFieldReadsNothing(bool? isPassword) =>
+        FieldContextRules.ClassifySelection(elementReachable: true, isPassword, selected: "secret", maxChars: 100)
+            .Should().Be(SelectionRead.None);
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    [TestCase("\u200B\u200D")]
+    public void NoVisibleSelectionReadsNothing(string? selected) =>
+        FieldContextRules.ClassifySelection(elementReachable: true, isPassword: false, selected, maxChars: 100)
+            .Should().Be(SelectionRead.None);
+
+    [Test]
+    public void TheSelectionIsTrimmedAndCut() =>
+        FieldContextRules.ClassifySelection(elementReachable: true, isPassword: false, selected: "  hello  ", maxChars: 3)
+            .Should().Be(new SelectionRead.Text("hel"));
 }

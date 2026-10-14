@@ -26,6 +26,24 @@ public sealed class User32InputTests
     }
 
     [Test]
+    public void CtrlCIsControlDownCDownCUpControlUp()
+    {
+        var inputs = User32Input.CtrlCInputs();
+
+        inputs.Select(i => i.Type).Should().AllBeEquivalentTo(User32Input.InputKeyboard);
+        inputs.Select(i => i.Union.Keyboard.VirtualKey).Should().Equal(0x11, 0x43, 0x43, 0x11);
+        inputs.Select(i => i.Union.Keyboard.Flags).Should().Equal(0u, 0u, User32Input.KeyEventKeyUp, User32Input.KeyEventKeyUp);
+    }
+
+    [Test]
+    public void EveryCopyEventCarriesTheTagTheKeyboardHookIgnores()
+    {
+        var inputs = User32Input.CtrlCInputs();
+
+        inputs.Select(i => i.Union.Keyboard.ExtraInfo).Should().AllBeEquivalentTo(HookEventReducer.InjectedTag);
+    }
+
+    [Test]
     public void TheInputStructMatchesTheNativeX64Layout() =>
         Marshal.SizeOf<User32Input.Input>().Should().Be(40);
 }

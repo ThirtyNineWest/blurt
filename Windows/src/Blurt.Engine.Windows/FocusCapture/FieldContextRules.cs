@@ -79,6 +79,29 @@ public static class FieldContextRules
             IsSecure: false);
     }
 
+    /// <summary>
+    /// What a selection read found. No reachable element is <see cref="SelectionRead.Unreadable"/>
+    /// (the one case the copy fallback may run on); an unreadable password flag or a password field
+    /// is <see cref="SelectionRead.None"/>; otherwise the selection, trimmed, visible text only, cut to
+    /// <paramref name="maxChars"/>, or <see cref="SelectionRead.None"/> when there is none.
+    /// </summary>
+    public static SelectionRead ClassifySelection(bool elementReachable, bool? isPassword, string? selected, int maxChars)
+    {
+        if (!elementReachable)
+        {
+            return SelectionRead.Unreadable;
+        }
+
+        if (isPassword is not false)
+        {
+            return SelectionRead.None;
+        }
+
+        return Visible(selected.TrimmedNonEmpty(), maxChars) is { } text
+            ? new SelectionRead.Text(text)
+            : SelectionRead.None;
+    }
+
     private static string? Visible(string? text, int maxChars) =>
         FocusCaptureRules.Clip(FocusCaptureRules.VisibleTextOrNil(text), maxChars);
 }
