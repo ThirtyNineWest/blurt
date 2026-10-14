@@ -204,6 +204,9 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     /// <summary>Re-reads the trigger key and activation after the user rebinds them.</summary>
     public void DictationBindingChanged() => _keyHook?.RefreshBinding();
 
+    /// <summary>Re-reads the read-aloud settings into the router after the user changes them.</summary>
+    public void ReadAloudSettingsChanged() => _speechRouter?.RefreshSettings();
+
     /// <summary>Reloads the cues for a newly selected sound pack and previews it.</summary>
     public void SoundPackChanged() => _cues.PackChanged();
 
@@ -215,9 +218,11 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         Session.PhaseChanged -= OnPhaseChanged;
         _keyHook?.Dispose();
         _mouseHook?.Dispose();
-        if (_speechRouter is not null)
+        var router = _speechRouter;
+        _speechRouter = null;
+        if (router is not null)
         {
-            await _speechRouter.DisposeAsync();
+            await router.DisposeAsync();
         }
 
         await _lifetime.CancelAsync();

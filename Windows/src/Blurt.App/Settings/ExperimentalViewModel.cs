@@ -17,12 +17,14 @@ public sealed class ExperimentalViewModel : ObservableObject
     private readonly SelectionAskStore _ask;
     private readonly ReadAloudStyleStore _style;
     private readonly DictationSettingsViewModel _dictation;
+    private readonly AppCoordinator _coordinator;
 
-    /// <summary>Creates the view model over the read-aloud stores and the trigger pickers.</summary>
-    public ExperimentalViewModel(SettingsStores settings, DictationSettingsViewModel dictation)
+    /// <summary>Creates the view model over the read-aloud stores and the trigger pickers, applying changes through <paramref name="coordinator"/>.</summary>
+    public ExperimentalViewModel(SettingsStores settings, DictationSettingsViewModel dictation, AppCoordinator coordinator)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(dictation);
+        _coordinator = coordinator;
         _readAloud = settings.SelectionSpeech;
         _ask = settings.SelectionAsk;
         _style = settings.ReadAloudStyle;
@@ -43,6 +45,7 @@ public sealed class ExperimentalViewModel : ObservableObject
             }
 
             _readAloud.IsEnabled = value;
+            _coordinator.ReadAloudSettingsChanged();
             Raise(nameof(ReadAloud), nameof(ShowsReadOptions), nameof(ShowsAskNote), nameof(ShowsSkipNote));
         }
     }
@@ -59,6 +62,7 @@ public sealed class ExperimentalViewModel : ObservableObject
             }
 
             _ask.IsEnabled = value;
+            _coordinator.ReadAloudSettingsChanged();
             Raise(nameof(Ask), nameof(ShowsAskNote), nameof(HowToUse));
         }
     }
@@ -75,6 +79,7 @@ public sealed class ExperimentalViewModel : ObservableObject
             }
 
             _style.Speed = value;
+            _coordinator.ReadAloudSettingsChanged();
             Raise(nameof(Speed));
         }
     }
@@ -94,6 +99,7 @@ public sealed class ExperimentalViewModel : ObservableObject
             }
 
             _style.SkipsJargon = value;
+            _coordinator.ReadAloudSettingsChanged();
             Raise(nameof(SkipsJargon), nameof(ShowsSkipNote));
         }
     }

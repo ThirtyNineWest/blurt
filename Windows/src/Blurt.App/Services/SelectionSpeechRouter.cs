@@ -1,4 +1,5 @@
 using System.Media;
+using Blurt.Engine.Config;
 using Blurt.Engine.Diagnostics;
 using Blurt.Engine.Hotkey;
 using Blurt.Engine.Pipeline;
@@ -11,8 +12,9 @@ namespace Blurt.App.Services;
 /// command goes straight to <see cref="DictationSession.Submit"/>; with it on, a press over selected
 /// text reads it aloud, and a hold with asking on records a request about it and reads the answer.
 /// The decisions are <see cref="SelectionSpeechRouting"/>'s; this class carries out its actions.
-/// Thread-safe: the routing state sits behind one lock and every action runs outside it, so a
-/// hook-thread callback never blocks.
+/// Thread-safe: the routing state and a cached copy of the read-aloud settings sit behind one lock,
+/// and every action runs outside it. A hook-thread callback never touches a settings store, which
+/// can be held across a file write, so it never blocks; <see cref="RefreshSettings"/> re-reads them.
 /// </summary>
 public sealed class SelectionSpeechRouter : IAsyncDisposable
 {
@@ -27,8 +29,12 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
     private CancellationTokenSource? _speech;
     private CancellationTokenSource? _holdTimer;
     private int _generation;
+    private bool _disposed;
+    private bool _readAloud;
+    private bool _ask;
+    private ReadAloudStyle _style;
 
-    /// <summary>Routes commands for <paramref name="session"/>, reading the switches from <paramref name="settings"/> at every press.</summary>
+    /// <summary>Routes commands for <paramref name="session"/>, reading the switches from <paramref name="settings"/> now and at each <see cref="RefreshSettings"/>.</summary>
     /// <param name="session">Receives every command the routing forwards.</param>
     /// <param name="settings">The read-aloud, asking, and style stores.</param>
     /// <param name="speaker">Reads text and answers aloud.</param>
@@ -40,6 +46,9 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
         _settings = settings;
         _speaker = speaker;
         _readSelection = readSelection;
+        _readAloud = settings.SelectionSpeech.IsEnabled;
+        _ask = settings.SelectionAsk.IsEnabled;
+        _style = settings.ReadAloudStyle.Style;
     }
 
     /// <summary>The hook's terminal-phase sync: a dictation ended without a key event.</summary>
@@ -48,13 +57,22 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
     /// <summary>The hook's silent gate reset: a read ended without a key event.</summary>
     public Action ResetGate { get; set; } = static () => { };
 
-    /// <summary>Routes one trigger command.</summary>
-    public void Submit(Command command)
+    /// <summary>Re-reads the read-aloud switch, asking, and the style from the stores. Call off the hook thread after any of them changes.</summary>
+    public void RefreshSettings()
     {
         var readAloud = _settings.SelectionSpeech.IsEnabled;
         var ask = _settings.SelectionAsk.IsEnabled;
-        Perform(Route(routing => routing.Submit(command, readAloud, ask)));
+        var style = _settings.ReadAloudStyle.Style;
+        lock (_gate)
+        {
+            _readAloud = readAloud;
+            _ask = ask;
+            _style = style;
+        }
     }
+
+    /// <summary>Routes one trigger command.</summary>
+    public void Submit(Command command) => Perform(Route(routing => routing.Submit(command, _readAloud, _ask)));
 
     /// <summary>The hook's latch: the press was a tap.</summary>
     public void KeyLatched() => Perform(Route(routing => routing.KeyLatched()));
@@ -62,26 +80,53 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
     /// <summary>A dictation reached a terminal phase.</summary>
     public void SessionReachedTerminalPhase(PipelinePhase phase) => Perform(Route(routing => routing.SessionReachedTerminalPhase(phase)));
 
-    /// <summary>Stops any speech and hold timer.</summary>
-    public ValueTask DisposeAsync()
+    /// <summary>Stops any speech and hold timer; afterwards every command and callback is ignored.</summary>
+    public async ValueTask DisposeAsync()
     {
-        StopSpeech();
+        CancellationTokenSource? speech;
         CancellationTokenSource? hold;
         lock (_gate)
         {
+            _disposed = true;
+            speech = _speech;
             hold = _holdTimer;
+            _speech = null;
             _holdTimer = null;
         }
 
-        hold?.Cancel();
-        return ValueTask.CompletedTask;
+        if (speech is not null)
+        {
+            await speech.CancelAsync().ConfigureAwait(false);
+        }
+
+        if (hold is not null)
+        {
+            await hold.CancelAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Cancels <paramref name="cts"/> on the thread pool, so its callbacks never run on the calling (hook) thread.</summary>
+    private static void Stop(CancellationTokenSource? cts)
+    {
+        if (cts is not null)
+        {
+            TaskObserver.Observe(cts.CancelAsync(), LogCategory, "stop speech");
+        }
     }
 
     private IReadOnlyList<RoutingAction> Route(Func<SelectionSpeechRouting, IReadOnlyList<RoutingAction>> decide)
     {
         lock (_gate)
         {
-            return decide(_routing);
+            return _disposed ? [] : decide(_routing);
+        }
+    }
+
+    private ReadAloudStyle CurrentStyle()
+    {
+        lock (_gate)
+        {
+            return _style;
         }
     }
 
@@ -95,11 +140,11 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
                     _session.Submit(forward.Command);
                     break;
                 case RoutingAction.Speak speak:
-                    var style = _settings.ReadAloudStyle.Style;
+                    var style = CurrentStyle();
                     Run(ct => _speaker.SpeakAsync(speak.Text, style, ct));
                     break;
                 case RoutingAction.Answer answer:
-                    var answerStyle = _settings.ReadAloudStyle.Style;
+                    var answerStyle = CurrentStyle();
                     Run(ct => _speaker.AnswerAsync(answer.Request, answer.Selection, answerStyle, ct));
                     break;
                 case var _ when ReferenceEquals(action, RoutingAction.ReadSelection):
@@ -146,27 +191,45 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
         CancellationTokenSource? previous;
         lock (_gate)
         {
+            if (_disposed)
+            {
+                cts.Dispose();
+                return;
+            }
+
             previous = _holdTimer;
             _holdTimer = cts;
         }
 
-        previous?.Cancel();
-        previous?.Dispose();
-        TaskObserver.Observe(HoldAsync(cts.Token), LogCategory, "hold timer");
+        Stop(previous);
+        TaskObserver.Observe(HoldAsync(cts), LogCategory, "hold timer");
     }
 
-    private async Task HoldAsync(CancellationToken ct)
+    /// <summary>Delivers the hold only while <paramref name="cts"/> is still the current, uncancelled timer.</summary>
+    private async Task HoldAsync(CancellationTokenSource cts)
     {
         try
         {
-            await Task.Delay(SelectionSpeechRouting.AskHoldDelay, ct).ConfigureAwait(false);
+            await Task.Delay(SelectionSpeechRouting.AskHoldDelay, cts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        Perform(Route(routing => routing.HoldElapsed()));
+        IReadOnlyList<RoutingAction> actions;
+        lock (_gate)
+        {
+            if (_disposed || !ReferenceEquals(_holdTimer, cts) || cts.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _holdTimer = null;
+            actions = _routing.HoldElapsed();
+        }
+
+        Perform(actions);
     }
 
     /// <summary>Runs one read or answer as the current speech; only a speech that ends on its own reports back.</summary>
@@ -177,12 +240,18 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
         int generation;
         lock (_gate)
         {
+            if (_disposed)
+            {
+                cts.Dispose();
+                return;
+            }
+
             previous = _speech;
             _speech = cts;
             generation = ++_generation;
         }
 
-        previous?.Cancel();
+        Stop(previous);
         TaskObserver.Observe(SpeakAsync(work, cts, generation), LogCategory, "read-aloud");
     }
 
@@ -192,8 +261,9 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
         {
             await Task.Run(() => work(cts.Token)).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        catch (Exception) when (cts.IsCancellationRequested)
         {
+            // A stop can surface as a socket or disposed-object failure rather than a cancellation.
             return;
         }
         catch (Exception ex)
@@ -206,7 +276,7 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
         lock (_gate)
         {
             // A read this router stopped was cancelled, and a newer one may already be playing.
-            if (cts.IsCancellationRequested || generation != _generation)
+            if (_disposed || cts.IsCancellationRequested || generation != _generation)
             {
                 return;
             }
@@ -227,6 +297,6 @@ public sealed class SelectionSpeechRouter : IAsyncDisposable
             _speech = null;
         }
 
-        speech?.Cancel();
+        Stop(speech);
     }
 }
