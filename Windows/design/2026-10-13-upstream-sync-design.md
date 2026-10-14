@@ -8,20 +8,20 @@ here are numbered `D18` onward and are binding on the plan in
 
 ## What upstream changed, and what this sync does with it
 
-| Upstream change (PR)                                                    | Windows                                                                          |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Text shortcuts: spoken phrase → saved text before the paste (#200)      | Ported (engine + Settings).                                                      |
-| Drop the same-window separator after the user types or clicks (#206)   | Ported, with a Windows source for "has the user typed or clicked" (`D21`).       |
-| Experimental read-selected-text-aloud over streaming TTS (#221)         | Ported (engine + WASAPI playback + UIA selection read + Ctrl+C fallback).        |
-| Read-aloud work mode: speed 1×–3×, skip jargon, hold-to-ask (#225)      | Ported. Speed is a pure C# time stretch (`D23`).                                 |
-| "Report a bug" footer link (#204), share link (#197)                    | Ported; the bug link points at the fork (`D27`).                                 |
-| Menu-bar hint says tap or hold per the activation setting (v0.1.60)     | Ported to the tray hint (`D28`).                                                 |
-| `TriggerActivation.startVerb/finishHint/stopHint` wording (#209, #225)  | Ported (the Experimental footer needs them).                                     |
-| Style menu not updating after Settings edits (#219)                     | Not needed: the WPF app shares one `StylesViewModel`, which reloads on save.     |
-| Electron apps with a renamed framework (#205)                           | Not needed: Windows detects Chromium by `chrome_100_percent.pak`, not by name.   |
-| `fn` trigger key, `GlobeKeyOverride`, stale-`fn` migration (#209)       | Not ported: macOS-only key.                                                      |
-| Sparkle auto-update, release pipeline, hand-written release notes       | Not ported: the Windows engine keeps its GitHub-API update checker (`D18`).      |
-| Intel Mac build (#199), iPhone app and engine fencing (#223)            | Not ported: platform work. The Swift seam renames there are not mirrored.        |
+| Upstream change (PR)                                                   | Windows                                                                        |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Text shortcuts: spoken phrase → saved text before the paste (#200)     | Ported (engine + Settings).                                                    |
+| Drop the same-window separator after the user types or clicks (#206)   | Ported, with a Windows source for "has the user typed or clicked" (`D21`).     |
+| Experimental read-selected-text-aloud over streaming TTS (#221)        | Ported (engine + WASAPI playback + UIA selection read + Ctrl+C fallback).      |
+| Read-aloud work mode: speed 1×–3×, skip jargon, hold-to-ask (#225)     | Ported. Speed is a pure C# time stretch (`D23`).                               |
+| "Report a bug" footer link (#204), share link (#197)                   | Ported; the bug link points at the fork (`D27`).                               |
+| Menu-bar hint says tap or hold per the activation setting (v0.1.60)    | Ported to the tray hint (`D28`).                                               |
+| `TriggerActivation.startVerb/finishHint/stopHint` wording (#209, #225) | Ported (the Experimental footer needs them).                                   |
+| Style menu not updating after Settings edits (#219)                    | Not needed: the WPF app shares one `StylesViewModel`, which reloads on save.   |
+| Electron apps with a renamed framework (#205)                          | Not needed: Windows detects Chromium by `chrome_100_percent.pak`, not by name. |
+| `fn` trigger key, `GlobeKeyOverride`, stale-`fn` migration (#209)      | Not ported: macOS-only key.                                                    |
+| Sparkle auto-update, release pipeline, hand-written release notes      | Not ported: the Windows engine keeps its GitHub-API update checker (`D18`).    |
+| Intel Mac build (#199), iPhone app and engine fencing (#223)           | Not ported: platform work. The Swift seam renames there are not mirrored.      |
 
 ## Decisions
 
@@ -83,7 +83,7 @@ here are numbered `D18` onward and are binding on the plan in
   fork; change `BlurtLinks.ReportBug` if the port moves. "Share Blurt on LinkedIn" and "Report a
   Bug" join the tray menu, the Windows analog of upstream's Help menu.
 - **D28 Tray hint.** The disabled hint line reads `"{activation label} {key label} to dictate and
-  paste"`, e.g. "Hold right Ctrl to dictate and paste".
+paste"`, e.g. "Hold right Ctrl to dictate and paste".
 - **D29 Hazards accepted while experimental.** (1) A Ctrl+C fallback posted while Right Shift is the
   held trigger reaches the app as Ctrl+Shift+C; same class as the paste chord's known limitation.
   (2) A UIA-opaque app that copies the current line on an empty Ctrl+C would read that line aloud;

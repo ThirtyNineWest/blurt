@@ -56,7 +56,8 @@ CI workflow (`.github/workflows/check-windows.yml` on `windows-latest`, not a re
 still lint the Windows docs and workflow file. See
 [`Windows/README.md`](./Windows/README.md) for build/test/run/publish instructions and
 [`Windows/design/2026-09-22-windows-port-design.md`](./Windows/design/2026-09-22-windows-port-design.md)
-for the full design and decision log.
+for the full design and decision log. The sync to upstream v0.1.62 is documented in
+`Windows/design/2026-10-13-upstream-sync-design.md`.
 
 ## Repository map
 

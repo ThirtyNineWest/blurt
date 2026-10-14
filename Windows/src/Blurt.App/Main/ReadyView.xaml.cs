@@ -1,8 +1,6 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using Blurt.Engine.Diagnostics;
+using Blurt.App.Services;
 
 namespace Blurt.App.Main;
 
@@ -13,8 +11,6 @@ namespace Blurt.App.Main;
 /// </summary>
 public partial class ReadyView : UserControl
 {
-    private static readonly Uri PoweredByUrl = new("https://www.assemblyai.com/blurt");
-
     /// <summary>Creates the view.</summary>
     public ReadyView()
     {
@@ -38,15 +34,7 @@ public partial class ReadyView : UserControl
         }
     }
 
-    private void OnPoweredByClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo(PoweredByUrl.AbsoluteUri) { UseShellExecute = true });
-        }
-        catch (Exception failure) when (failure is Win32Exception or InvalidOperationException)
-        {
-            BlurtLog.Error("ReadyView", $"could not open the AssemblyAI page: {failure.Message}");
-        }
-    }
+    private void OnPoweredByClick(object sender, RoutedEventArgs e) => BlurtLinks.Open(BlurtLinks.PoweredBy, "ReadyView");
+
+    private void OnReportBugClick(object sender, RoutedEventArgs e) => BlurtLinks.Open(BlurtLinks.ReportBug, "ReadyView");
 }

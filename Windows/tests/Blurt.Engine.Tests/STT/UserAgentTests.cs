@@ -56,7 +56,7 @@ public sealed class UserAgentTests
     {
         var os = Environment.OSVersion.Version;
 
-        UserAgent.Current.Should().StartWith($"{HostIdentity.Current.ProductName}/0.1.56 ");
+        UserAgent.Current.Should().StartWith($"{HostIdentity.Current.ProductName}/0.1.62 ");
         UserAgent.Current.Should().Contain($"(Windows {os.Major}.{os.Minor}.{os.Build}");
     }
 

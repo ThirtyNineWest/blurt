@@ -1,5 +1,8 @@
 # Blurt for Windows — design
 
+> The sync to upstream v0.1.62 is recorded in
+> [`2026-10-13-upstream-sync-design.md`](./2026-10-13-upstream-sync-design.md) (`D18`–`D30`).
+
 Date: 2026-09-22. Status: approved for implementation (owner pre-approved the C# direction and
 delegated the remaining decisions; every judgment call is recorded below as `D<n>` so it can be
 reversed).

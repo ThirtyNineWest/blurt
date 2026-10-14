@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <Version>0.1.56</Version>
+    <Version>0.1.62</Version>
     <Company>Blurt</Company>
     <Product>Blurt</Product>
   </PropertyGroup>

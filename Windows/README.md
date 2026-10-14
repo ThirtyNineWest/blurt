@@ -4,7 +4,9 @@ A C#/.NET 10 WPF port of Blurt, the AssemblyAI dictation app, for Windows 11. It
 through the same AssemblyAI request and pipeline rules as the macOS app, adapted to WASAPI,
 `WH_KEYBOARD_LL`, UI Automation, and the Win32 clipboard. See
 [`Windows/design/2026-09-22-windows-port-design.md`](./design/2026-09-22-windows-port-design.md)
-for the full design and the decisions (`D1`–`D17`) behind it.
+for the full design and the decisions (`D1`–`D17`) behind it, and
+[`Windows/design/2026-10-13-upstream-sync-design.md`](./design/2026-10-13-upstream-sync-design.md)
+for the sync to upstream v0.1.62 (`D18`–`D30`).
 
 ## Prerequisites
 
@@ -104,6 +106,31 @@ Right Alt and Right Win are not offered because a lone tap has a system meaning 
 Win opens the Start menu, a lone Alt tap enters menu-bar mode in Win32 apps) and Blurt swallows no
 keystrokes.
 
+## What's new in the v0.1.62 sync
+
+The port tracks upstream v0.1.62 (`Directory.Build.props` `Version`). The design is in
+[`Windows/design/2026-10-13-upstream-sync-design.md`](./design/2026-10-13-upstream-sync-design.md).
+
+- **Text shortcuts.** Settings → Vocabulary holds a list of phrases and their replacements,
+  expanded in the pasted text. The expansion never goes to AssemblyAI: the service still hears and
+  returns the spoken phrase.
+- **Key terms moved.** The key terms box now lives in Settings → Vocabulary, beside the shortcuts.
+- **Separator fix.** Dictating twice into the same window no longer adds the separator space when
+  you typed or clicked in between. Blurt notices your input through its keyboard hook and a new
+  mouse hook, and ignores its own pastes.
+- **Experimental read-aloud.** Settings → Advanced → Experimental reads the selected text aloud,
+  off by default. While it is on you can hold the trigger key to ask about the selection, pick a
+  speed from 1× to 3×, and skip code, links, and long numbers. Speech comes from AssemblyAI's
+  streaming text-to-speech WebSocket, whose endpoint is undocumented and may change. The jargon
+  skip and the answer to a spoken question send the selection to AssemblyAI's LLM Gateway.
+- **Ctrl+Shift+C hazard.** With Right Shift as the held trigger, the Ctrl+C that read-aloud sends
+  to copy a selection reaches the app as Ctrl+Shift+C. Prefer Right Ctrl while read-aloud is on.
+- **Footer and tray links.** The ready view footer reads "Powered by AssemblyAI · Report a bug",
+  and the tray menu adds Report a Bug and Share Blurt on LinkedIn. The bug link opens this fork's
+  issues, `https://github.com/ThirtyNineWest/blurt/issues`.
+- **Tray hint.** The tray menu's first line follows the activation setting, for example "Hold
+  right Ctrl to dictate and paste".
+
 ## How the tree maps to the Swift engine
 
 The Swift package under `Sources/BlurtEngine/` is the behavior spec; its Swift Testing suites
@@ -120,6 +147,7 @@ tables, same prompt fitting, same wire shape, same cancel races.
 | `Sources/BlurtEngine/Permissions/`                                        | `Windows/src/Blurt.Engine/Permissions/`                                                                            |
 | `Sources/BlurtEngine/Pipeline/`                                           | `Windows/src/Blurt.Engine/Pipeline/`                                                                               |
 | `Sources/BlurtEngine/STT/`                                                | `Windows/src/Blurt.Engine/STT/`                                                                                    |
+| `Sources/BlurtEngine/TTS/`                                                | `Windows/src/Blurt.Engine/TTS/`                                                                                    |
 | `Sources/BlurtEngine/Update/`                                             | `Windows/src/Blurt.Engine/Update/`                                                                                 |
 | AVFoundation, `CGEventTap`, AX, `NSPasteboard`, Keychain (platform seams) | `Windows/src/Blurt.Engine.Windows/` (WASAPI, `WH_KEYBOARD_LL`, UI Automation, Win32 clipboard, Credential Manager) |
 | `App/Blurt/Blurt/`                                                        | `Windows/src/Blurt.App/`                                                                                           |
@@ -155,6 +183,9 @@ tracked for later work:
 - No caret-anchored overlay placement (UIA `TextPattern` bounding rectangles) and no per-monitor
   DPI/multi-monitor placement polish yet; the overlay defaults to bottom-center of the primary
   screen.
+- Read-aloud (experimental) reads a selection through UI Automation. An app that exposes no UIA
+  text falls back to sending Ctrl+C, so it needs a working Ctrl+C, and an app that copies the
+  current line on an empty Ctrl+C would read that line aloud.
 - No installer (MSIX or Inno Setup), no code signing, and no release workflow yet —
   `scripts/windows/publish.ps1` output is the deliverable for this cut.
 

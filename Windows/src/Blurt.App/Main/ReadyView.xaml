@@ -52,7 +52,7 @@
     </StackPanel>
 
     <TextBlock Margin="0,20,0,0" HorizontalAlignment="Center" FontSize="11">
-      <Run Foreground="{StaticResource Secondary}" Text="Powered by " /><Hyperlink Foreground="{StaticResource Accent}" Click="OnPoweredByClick">AssemblyAI</Hyperlink>
+      <Run Foreground="{StaticResource Secondary}" Text="Powered by " /><Hyperlink Foreground="{StaticResource Accent}" Click="OnPoweredByClick">AssemblyAI</Hyperlink><Run Foreground="{StaticResource Secondary}" Text=" · " /><Hyperlink Foreground="{StaticResource Accent}" Click="OnReportBugClick">Report a bug</Hyperlink>
     </TextBlock>
   </StackPanel>
 </UserControl>

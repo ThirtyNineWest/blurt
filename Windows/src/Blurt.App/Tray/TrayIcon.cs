@@ -7,8 +7,8 @@ namespace Blurt.App.Tray;
 
 /// <summary>
 /// The notification-area icon: one glyph per <see cref="TrayStatus"/> and a menu with Open Blurt,
-/// Settings…, Check for Updates…, and Quit. A convenience only; nothing depends on it for
-/// correctness. Create and use it on the UI thread.
+/// Settings…, Report a Bug, Share Blurt on LinkedIn, Check for Updates…, and Quit. A convenience
+/// only; nothing depends on it for correctness. Create and use it on the UI thread.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
@@ -16,11 +16,13 @@ public sealed class TrayIcon : IDisposable
     private readonly ToolStripMenuItem _hint;
     private readonly Dictionary<TrayStatus, Icon> _icons;
     private readonly TriggerKeyStore _triggerKey;
+    private readonly TriggerActivationStore _activation;
 
-    /// <summary>Creates the icon, visible, in the idle state; <paramref name="triggerKey"/> names the key in the menu's hint line.</summary>
-    public TrayIcon(TriggerKeyStore triggerKey)
+    /// <summary>Creates the icon, visible, in the idle state; <paramref name="triggerKey"/> and <paramref name="activation"/> name the key and the gesture in the menu's hint line.</summary>
+    public TrayIcon(TriggerKeyStore triggerKey, TriggerActivationStore activation)
     {
         _triggerKey = triggerKey;
+        _activation = activation;
         _icons = Enum.GetValues<TrayStatus>().ToDictionary(status => status, LoadIcon);
 
         _hint = new ToolStripMenuItem { Enabled = false };
@@ -29,6 +31,9 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Open Blurt", null, (_, _) => OpenRequested?.Invoke()));
         menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => SettingsRequested?.Invoke()));
+        menu.Items.Add(new ToolStripMenuItem("Report a Bug", null, (_, _) => ReportBugRequested?.Invoke()));
+        menu.Items.Add(new ToolStripMenuItem("Share Blurt on LinkedIn", null, (_, _) => ShareRequested?.Invoke()));
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Check for Updates…", null, (_, _) => CheckForUpdatesRequested?.Invoke()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Quit Blurt", null, (_, _) => QuitRequested?.Invoke()));
@@ -46,6 +51,12 @@ public sealed class TrayIcon : IDisposable
 
     /// <summary>Raised by "Settings…".</summary>
     public event Action? SettingsRequested;
+
+    /// <summary>Raised by "Report a Bug".</summary>
+    public event Action? ReportBugRequested;
+
+    /// <summary>Raised by "Share Blurt on LinkedIn".</summary>
+    public event Action? ShareRequested;
 
     /// <summary>Raised by "Check for Updates…".</summary>
     public event Action? CheckForUpdatesRequested;
@@ -72,7 +83,7 @@ public sealed class TrayIcon : IDisposable
         }
     }
 
-    private void RefreshHint() => _hint.Text = $"Tap or hold {_triggerKey.TriggerKey.Label()} to dictate and paste";
+    private void RefreshHint() => _hint.Text = $"{_activation.Activation.Label()} {_triggerKey.TriggerKey.Label()} to dictate and paste";
 
     private static Icon LoadIcon(TrayStatus status)
     {

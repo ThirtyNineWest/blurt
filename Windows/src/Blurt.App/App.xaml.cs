@@ -157,10 +157,12 @@ public partial class App : Application
             RestartAfterReset);
         _settingsWindow = settingsWindow;
 
-        var tray = new TrayIcon(settings.TriggerKey);
+        var tray = new TrayIcon(settings.TriggerKey, settings.TriggerActivation);
         _tray = tray;
         tray.OpenRequested += ShowMainWindow;
         tray.SettingsRequested += () => ShowSettings(false);
+        tray.ReportBugRequested += () => BlurtLinks.Open(BlurtLinks.ReportBug, LogCategory);
+        tray.ShareRequested += () => BlurtLinks.Open(BlurtLinks.ShareOnLinkedIn, LogCategory);
         tray.CheckForUpdatesRequested += () => Observe(updates.CheckNowAsync(), "update check");
         tray.QuitRequested += () => Observe(QuitAsync(), "quit");
 
