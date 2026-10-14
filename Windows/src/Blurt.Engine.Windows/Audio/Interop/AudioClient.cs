@@ -26,6 +26,18 @@ public struct WaveFormatEx
         BitsPerSample = SyncSTTLimits.BitDepth,
         ExtraSize = 0,
     };
+
+    /// <summary>The PCM format playback requests: mono 16-bit at <paramref name="sampleRate"/> Hz.</summary>
+    public static WaveFormatEx RenderRequest(int sampleRate) => new()
+    {
+        FormatTag = 1,
+        Channels = 1,
+        SamplesPerSec = (uint)sampleRate,
+        AvgBytesPerSec = (uint)sampleRate * 2,
+        BlockAlign = 2,
+        BitsPerSample = 16,
+        ExtraSize = 0,
+    };
 }
 
 /// <summary>Flags, codes, and durations of the WASAPI audio client.</summary>
@@ -114,7 +126,15 @@ internal static class CaptureEndpoint
     /// <paramref name="client"/> null.
     /// </summary>
     /// <exception cref="COMException">The device enumerator could not be created.</exception>
-    public static int ActivateDefault(out IAudioClient? client)
+    public static int ActivateDefault(out IAudioClient? client) => Activate(EDataFlow.Capture, out client);
+
+    /// <summary>
+    /// Activates an <see cref="IAudioClient"/> on the default console endpoint of <paramref name="flow"/>, without
+    /// initializing it. Returns 0 with a client the caller must release, or the failing HRESULT with
+    /// <paramref name="client"/> null.
+    /// </summary>
+    /// <exception cref="COMException">The device enumerator could not be created.</exception>
+    public static int Activate(EDataFlow flow, out IAudioClient? client)
     {
         client = null;
         IMMDeviceEnumerator? enumerator = null;
@@ -122,7 +142,7 @@ internal static class CaptureEndpoint
         try
         {
             enumerator = MmDeviceApi.CreateEnumerator();
-            var hr = enumerator.GetDefaultAudioEndpoint(EDataFlow.Capture, ERole.Console, out device);
+            var hr = enumerator.GetDefaultAudioEndpoint(flow, ERole.Console, out device);
             if (hr < 0)
             {
                 return hr;
@@ -155,7 +175,18 @@ internal static class CaptureEndpoint
     }
 }
 
-/// <summary>COM apartment initialization for capture threads.</summary>
+/// <summary>Opens the default console render endpoint.</summary>
+internal static class RenderEndpoint
+{
+    /// <summary>
+    /// Activates an <see cref="IAudioClient"/> on the default console render endpoint, without initializing it.
+    /// Returns 0 with a client the caller must release, or the failing HRESULT with <paramref name="client"/> null.
+    /// </summary>
+    /// <exception cref="COMException">The device enumerator could not be created.</exception>
+    public static int ActivateDefault(out IAudioClient? client) => CaptureEndpoint.Activate(EDataFlow.Render, out client);
+}
+
+/// <summary>COM apartment initialization for capture and render threads.</summary>
 internal static class Ole32
 {
     public const uint CoinitMultithreaded = 0;
