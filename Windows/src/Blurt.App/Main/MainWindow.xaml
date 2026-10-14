@@ -1,0 +1,44 @@
+<Window x:Class="Blurt.App.Main.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:main="clr-namespace:Blurt.App.Main"
+        Title="Blurt"
+        Width="480"
+        SizeToContent="Height"
+        ResizeMode="CanMinimize"
+        Background="White"
+        WindowStartupLocation="CenterScreen">
+  <Grid>
+    <DockPanel x:Name="Wizard" Margin="20,16,20,16">
+      <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+        <TextBlock FontSize="22" FontWeight="Bold" Text="Set up Blurt" />
+        <TextBlock Margin="0,4,0,0"
+                   TextWrapping="Wrap"
+                   Foreground="{StaticResource Secondary}"
+                   Text="Add your API key, allow the microphone, then choose your shortcut and sound." />
+      </StackPanel>
+
+      <DockPanel DockPanel.Dock="Bottom" Margin="0,16,0,0" LastChildFill="False">
+        <TextBlock DockPanel.Dock="Left"
+                   VerticalAlignment="Center"
+                   Foreground="{StaticResource Secondary}"
+                   Text="{Binding StepCaption, Mode=OneWay}" />
+        <Button DockPanel.Dock="Right"
+                Style="{StaticResource PrimaryButton}"
+                Content="{Binding ContinueTitle, Mode=OneWay}"
+                IsEnabled="{Binding CanContinue, Mode=OneWay}"
+                Click="OnContinueClick" />
+        <Button DockPanel.Dock="Right"
+                Margin="0,0,12,0"
+                Style="{StaticResource PlainButton}"
+                Content="Back"
+                Click="OnBackClick"
+                Visibility="{Binding CanGoBack, Mode=OneWay, Converter={StaticResource Visible}}" />
+      </DockPanel>
+
+      <ContentControl x:Name="StepHost" Focusable="False" />
+    </DockPanel>
+
+    <main:ReadyView x:Name="Ready" Visibility="Collapsed" />
+  </Grid>
+</Window>

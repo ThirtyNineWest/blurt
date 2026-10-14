@@ -1,0 +1,18 @@
+<UserControl x:Class="Blurt.App.Settings.ResetSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel>
+    <TextBlock Style="{StaticResource SectionHeader}" Text="Reset" />
+    <Border Style="{StaticResource Card}">
+      <DockPanel LastChildFill="False">
+        <TextBlock DockPanel.Dock="Left" Style="{StaticResource RowLabel}" Text="Reset Blurt" />
+        <Button DockPanel.Dock="Right"
+                Style="{StaticResource PlainButton}"
+                Foreground="{StaticResource ErrorText}"
+                Content="Reset Blurt…"
+                Click="OnResetClick" />
+      </DockPanel>
+    </Border>
+    <TextBlock x:Name="FooterText" Style="{StaticResource Footer}" />
+  </StackPanel>
+</UserControl>

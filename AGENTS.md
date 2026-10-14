@@ -46,6 +46,19 @@ For embedding or extending the engine's public API — seam contracts, error tab
 see [`Sources/BlurtEngine/README.md`](./Sources/BlurtEngine/README.md). This file covers repo-wide
 workflow and the _why_ behind the design; the engine's README covers the _what_ of the API surface.
 
+### Windows port
+
+`Windows/` is a separate C#/.NET 10 WPF port of this app for Windows 11, built file-by-file from
+`Sources/BlurtEngine/` behind the same seam contracts, plus a Win32/WASAPI/UI-Automation platform
+layer and a WPF shell. It has its own solution (`Windows/Blurt.sln`), its own tests, and its own
+CI workflow (`.github/workflows/check-windows.yml` on `windows-latest`, not a required check) —
+`scripts/check.sh` does not build or test it, though its prettier/markdownlint/actionlint steps
+still lint the Windows docs and workflow file. See
+[`Windows/README.md`](./Windows/README.md) for build/test/run/publish instructions and
+[`Windows/design/2026-09-22-windows-port-design.md`](./Windows/design/2026-09-22-windows-port-design.md)
+for the full design and decision log. The sync to upstream v0.1.62 is documented in
+`Windows/design/2026-10-13-upstream-sync-design.md`.
+
 ## Repository map
 
 ```text
@@ -96,6 +109,9 @@ evals/                       offline decision support — the repo's only Python
 .github/workflows/           check.yml (the gate, macos-26),
                              release-bump.yml (version bump) + release.yml (sign +
                              publish), codeql.yml
+Windows/                     C#/.NET 10 WPF port of the app for Windows 11 — own solution
+                             (Blurt.sln), own tests, own CI (see "Windows port" above and
+                             Windows/README.md)
 .claude/                     Claude Code hooks, skills, subagents (see CLAUDE.md)
 ```
 

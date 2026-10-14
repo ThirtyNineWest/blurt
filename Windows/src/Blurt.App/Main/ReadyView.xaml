@@ -1,0 +1,58 @@
+<UserControl x:Class="Blurt.App.Main.ReadyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:main="clr-namespace:Blurt.App.Main"
+             xmlns:svc="clr-namespace:Blurt.App.Services">
+  <StackPanel Margin="24,20,24,10">
+    <TextBlock HorizontalAlignment="Center"
+               FontSize="36"
+               FontWeight="Bold"
+               Foreground="{StaticResource Accent}"
+               Text="blurt"
+               AutomationProperties.Name="Blurt logo" />
+
+    <Grid Height="64" Margin="0,20,0,32">
+      <StackPanel VerticalAlignment="Center"
+                  Visibility="{Binding IsListening, Mode=OneWay, Converter={x:Static svc:TrueToCollapsed.Instance}}">
+        <TextBlock HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold">
+          <Run Text="{Binding Headline.Lead, Mode=OneWay}" /><Run FontWeight="Bold" Text="{Binding Headline.Key, Mode=OneWay}" /><Run Text="{Binding Headline.Tail, Mode=OneWay}" />
+        </TextBlock>
+        <TextBlock Margin="0,4,0,0"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Foreground="{StaticResource Secondary}"
+                   Text="{Binding Subtitle, Mode=OneWay}" />
+      </StackPanel>
+      <StackPanel VerticalAlignment="Center"
+                  Visibility="{Binding IsListening, Mode=OneWay, Converter={StaticResource Visible}}"
+                  AutomationProperties.Name="Listening">
+        <TextBlock HorizontalAlignment="Center" FontSize="18" FontWeight="Bold">
+          <Run Foreground="{StaticResource Accent}" Text="●" /><Run Text=" Listening…" />
+        </TextBlock>
+        <TextBlock Margin="0,4,0,0"
+                   HorizontalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"
+                   Foreground="{StaticResource Secondary}"
+                   Text="{Binding ListeningSubtitle, Mode=OneWay}" />
+      </StackPanel>
+    </Grid>
+
+    <main:StyleSwitcher x:Name="Switcher" />
+    <main:RecentDictationsView />
+
+    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+      <Button Style="{StaticResource PrimaryButton}" Content="Settings" Click="OnSettingsClick" />
+      <Button Margin="12,0,0,0"
+              Style="{StaticResource PlainButton}"
+              IsCancel="True"
+              Content="Cancel Dictation"
+              Click="OnCancelDictationClick"
+              Visibility="{Binding IsCapturing, Mode=OneWay, Converter={StaticResource Visible}}" />
+    </StackPanel>
+
+    <TextBlock Margin="0,20,0,0" HorizontalAlignment="Center" FontSize="11">
+      <Run Foreground="{StaticResource Secondary}" Text="Powered by " /><Hyperlink Foreground="{StaticResource Accent}" Click="OnPoweredByClick">AssemblyAI</Hyperlink><Run Foreground="{StaticResource Secondary}" Text=" · " /><Hyperlink Foreground="{StaticResource Accent}" Click="OnReportBugClick">Report a bug</Hyperlink>
+    </TextBlock>
+  </StackPanel>
+</UserControl>

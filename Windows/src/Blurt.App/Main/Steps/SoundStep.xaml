@@ -1,0 +1,40 @@
+<UserControl x:Class="Blurt.App.Main.Steps.SoundStep"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel>
+    <TextBlock Style="{StaticResource SectionHeader}" Text="Sound" />
+    <Border Style="{StaticResource Card}">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Style="{StaticResource RowLabel}" Text="Cue sound" />
+        <ComboBox MinWidth="200"
+                  MaxDropDownHeight="360"
+                  HorizontalAlignment="Right"
+                  IsSynchronizedWithCurrentItem="False"
+                  AutomationProperties.Name="Cue sound"
+                  ItemsSource="{Binding SoundPacks, Mode=OneTime}"
+                  DisplayMemberPath="Label"
+                  SelectedItem="{Binding SoundPack, Mode=TwoWay}">
+          <ComboBox.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.HeaderTemplate>
+                <DataTemplate>
+                  <TextBlock x:Name="Header"
+                             Margin="4,6,4,2"
+                             FontWeight="SemiBold"
+                             Foreground="{StaticResource Secondary}"
+                             Text="{Binding Name}" />
+                  <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding Name}" Value="">
+                      <Setter TargetName="Header" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
+                </DataTemplate>
+              </GroupStyle.HeaderTemplate>
+            </GroupStyle>
+          </ComboBox.GroupStyle>
+        </ComboBox>
+      </DockPanel>
+    </Border>
+    <TextBlock Style="{StaticResource Footer}" Text="Set to None to silence start and stop cues." />
+  </StackPanel>
+</UserControl>

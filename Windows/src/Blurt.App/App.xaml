@@ -1,0 +1,57 @@
+<Application x:Class="Blurt.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+  <Application.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <SolidColorBrush x:Key="Accent" Color="#01762F" />
+    <SolidColorBrush x:Key="Secondary" Color="#5F5F5F" />
+    <SolidColorBrush x:Key="ErrorText" Color="#C42B1C" />
+    <SolidColorBrush x:Key="CardFill" Color="#F7F7F5" />
+    <SolidColorBrush x:Key="CardBorder" Color="#DDDDD8" />
+
+    <Style x:Key="SectionHeader" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style x:Key="Footer" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,8,0,0" />
+    </Style>
+
+    <Style x:Key="RowLabel" TargetType="TextBlock">
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,12,0" />
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource CardFill}" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button">
+      <Setter Property="Background" Value="{StaticResource Accent}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+      <Setter Property="Padding" Value="14,4" />
+      <Setter Property="MinWidth" Value="88" />
+      <Style.Triggers>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Opacity" Value="0.5" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PlainButton" TargetType="Button">
+      <Setter Property="Padding" Value="14,4" />
+      <Setter Property="MinWidth" Value="88" />
+    </Style>
+  </Application.Resources>
+</Application>

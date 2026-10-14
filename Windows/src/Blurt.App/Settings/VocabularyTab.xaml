@@ -1,0 +1,54 @@
+<UserControl x:Class="Blurt.App.Settings.VocabularyTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Blurt.App.Services">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="20" DataContext="{Binding Vocabulary}">
+      <TextBlock Style="{StaticResource SectionHeader}" Text="Key Terms" />
+      <Border Style="{StaticResource Card}">
+        <TextBox Padding="4,3"
+                 AutomationProperties.Name="Key terms"
+                 Text="{Binding KeyTerms, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+      </Border>
+      <TextBlock Style="{StaticResource Footer}"
+                 Margin="0,-8,0,20"
+                 Text="Names and jargon Blurt should spell your way, separated by commas." />
+
+      <TextBlock Style="{StaticResource SectionHeader}" Text="Text Shortcuts" />
+      <Border Style="{StaticResource Card}">
+        <StackPanel>
+          <Grid>
+            <ListView x:Name="ShortcutList"
+                      Height="160"
+                      AutomationProperties.Name="Text shortcuts"
+                      ItemsSource="{Binding Shortcuts, Mode=OneWay}"
+                      SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      MouseDoubleClick="OnListDoubleClick"
+                      KeyDown="OnListKeyDown">
+              <ListView.View>
+                <GridView>
+                  <GridViewColumn Width="150" Header="Phrase" DisplayMemberBinding="{Binding Trigger, Mode=OneWay}" />
+                  <GridViewColumn Width="260" Header="Replacement" DisplayMemberBinding="{Binding Expansion, Mode=OneWay}" />
+                </GridView>
+              </ListView.View>
+            </ListView>
+            <TextBlock HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource Secondary}"
+                       IsHitTestVisible="False"
+                       Text="No shortcuts"
+                       Visibility="{Binding Shortcuts.Count, Mode=OneWay, Converter={x:Static svc:ZeroToVisible.Instance}}" />
+          </Grid>
+          <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+            <Button Padding="10,2" Content="Add…" IsEnabled="{Binding CanAdd, Mode=OneWay}" Click="OnAddClick" />
+            <Button Margin="8,0,0,0" Padding="10,2" Content="Edit…" IsEnabled="{Binding CanEditOrRemove, Mode=OneWay}" Click="OnEditClick" />
+            <Button Margin="8,0,0,0" Padding="10,2" Content="Remove" IsEnabled="{Binding CanEditOrRemove, Mode=OneWay}" Click="OnRemoveClick" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <TextBlock Style="{StaticResource Footer}"
+                 Margin="0,-8,0,0"
+                 Text="Say a phrase while dictating and it's replaced with your saved text. For example, “personal email” becomes your address." />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

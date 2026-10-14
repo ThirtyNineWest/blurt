@@ -1,0 +1,4 @@
+Windows/** text=auto eol=lf
+scripts/windows/** text=auto eol=lf
+.github/workflows/check-windows.yml text eol=lf
+*.ico binary

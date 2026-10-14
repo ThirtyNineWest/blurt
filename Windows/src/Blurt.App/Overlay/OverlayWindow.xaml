@@ -1,0 +1,87 @@
+<Window x:Class="Blurt.App.Overlay.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:overlay="clr-namespace:Blurt.App.Overlay"
+        Title="Blurt overlay"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        Focusable="False"
+        WindowStartupLocation="Manual"
+        SizeToContent="Manual">
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <SolidColorBrush x:Key="Ink" Color="#1D1B16" />
+    <SolidColorBrush x:Key="GreenOnDark" Color="#67AD82" />
+    <SolidColorBrush x:Key="ErrorOrange" Color="#E67F36" />
+    <LinearGradientBrush x:Key="OrbGradient" StartPoint="0.5,1" EndPoint="0.5,0">
+      <GradientStop Color="#D7D3F4" Offset="0" />
+      <GradientStop Color="#B0A7E9" Offset="0.0673" />
+      <GradientStop Color="#67AD82" Offset="0.1442" />
+      <GradientStop Color="#01762F" Offset="0.3029" />
+      <GradientStop Color="#3923C7" Offset="0.5962" />
+      <GradientStop Color="#887BDD" Offset="0.75" />
+      <GradientStop Color="#D7D3F4" Offset="0.8942" />
+      <GradientStop Color="#FFFFFF" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="OrbRingGradient" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Color="#01762F" Offset="0" />
+      <GradientStop Color="#FFFFFF" Offset="1" />
+    </LinearGradientBrush>
+  </Window.Resources>
+
+  <Border x:Name="Pill"
+          Margin="28"
+          CornerRadius="14"
+          Background="{StaticResource Ink}"
+          BorderBrush="#1FFFFFFF"
+          BorderThickness="1"
+          ToolTip="{Binding AccessibilityLabel}"
+          AutomationProperties.Name="{Binding AccessibilityLabel}"
+          MouseLeftButtonDown="OnPillMouseLeftButtonDown">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="0.25" Color="Black" />
+    </Border.Effect>
+    <Grid Margin="12,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <Grid x:Name="Orb"
+            Grid.Column="0"
+            Width="16.8"
+            Height="16.8"
+            Margin="0,0,8,0"
+            VerticalAlignment="Center"
+            Visibility="{Binding ShowsOrb, Converter={StaticResource Visible}}">
+        <Ellipse Fill="{StaticResource OrbGradient}" />
+        <Ellipse Stroke="{StaticResource OrbRingGradient}" StrokeThickness="1" RenderTransformOrigin="0.5,0.5">
+          <Ellipse.RenderTransform>
+            <RotateTransform x:Name="OrbRingRotation" />
+          </Ellipse.RenderTransform>
+        </Ellipse>
+      </Grid>
+
+      <overlay:MeterBars x:Name="Meter"
+                         Grid.Column="1"
+                         Fill="{StaticResource GreenOnDark}"
+                         Level="{Binding Level}"
+                         Visibility="{Binding ShowsMeter, Converter={StaticResource Visible}}" />
+
+      <TextBlock x:Name="StatusWord"
+                 Grid.Column="1"
+                 Text="{Binding StatusWord}"
+                 FontSize="10"
+                 FontWeight="SemiBold"
+                 VerticalAlignment="Center"
+                 TextTrimming="CharacterEllipsis"
+                 Foreground="{StaticResource GreenOnDark}"
+                 Visibility="{Binding ShowsStatusWord, Converter={StaticResource Visible}}" />
+    </Grid>
+  </Border>
+</Window>
