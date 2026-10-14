@@ -25,7 +25,8 @@ public sealed class SettingsViewModel : ObservableObject
         UpdateCheckModel updates,
         DictationLog log,
         ApiKeyModel apiKey,
-        VocabularyViewModel vocabulary)
+        VocabularyViewModel vocabulary,
+        ExperimentalViewModel experimental)
     {
         _developerMode = settings.DeveloperMode;
         _lastUpdateCheck = settings.LastUpdateCheck;
@@ -34,6 +35,7 @@ public sealed class SettingsViewModel : ObservableObject
         apiKey.PropertyChanged += OnApiKeyChanged;
         Styles = styles;
         Vocabulary = vocabulary;
+        Experimental = experimental;
         Updates = updates;
         DictationsPath = log.DictationsPath;
         ErrorsPath = log.ErrorsPath;
@@ -54,6 +56,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>The key terms and the text shortcuts.</summary>
     public VocabularyViewModel Vocabulary { get; }
+
+    /// <summary>The read-aloud switch and its options.</summary>
+    public ExperimentalViewModel Experimental { get; }
 
     /// <summary>The update check.</summary>
     public UpdateCheckModel Updates { get; }
@@ -89,6 +94,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         Styles.Reload();
         Vocabulary.Reload();
+        Experimental.Reload();
         Raise(nameof(LastCheckedCaption), nameof(DeveloperMode));
     }
 

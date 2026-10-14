@@ -13,10 +13,10 @@ namespace Blurt.App;
 
 /// <summary>
 /// Wires the dictation session to the shell: the trigger-key hook feeds the session's command
-/// queue, and every phase the session publishes is rendered to the overlay pill, the tray status,
-/// the capture flag, and the recording cues. Phases, levels, and delivered transcripts arrive on
-/// engine threads and are marshalled to the UI <see cref="Dispatcher"/>; every public member must
-/// be called on that dispatcher's thread.
+/// queue through the read-aloud router, and every phase the session publishes is rendered to the
+/// overlay pill, the tray status, the capture flag, and the recording cues. Phases, levels, and
+/// delivered transcripts arrive on engine threads and are marshalled to the UI
+/// <see cref="Dispatcher"/>; every public member must be called on that dispatcher's thread.
 /// </summary>
 public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
 {
@@ -29,6 +29,7 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
     private readonly CueSoundPlayer _cues;
     private readonly CancellationTokenSource _lifetime = new();
     private DictationKeyHook? _keyHook;
+    private SelectionSpeechRouter? _speechRouter;
     private LowLevelMouseHook? _mouseHook;
     private OverlayWindow? _overlay;
     private Task _levelsObserver = Task.CompletedTask;
@@ -120,16 +121,19 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
             TaskObserver.Observe(Task.Run(mic.WarmUpAsync), LogCategory, "microphone warm-up");
         }
 
-        var session = Session;
+        var router = new SelectionSpeechRouter(Session, _settings, _components.Speaker, _components.ReadSelection);
+        _speechRouter = router;
         _keyHook = new DictationKeyHook(
             _settings.TriggerKey,
             _settings.TriggerActivation,
-            onStart: () => session.Submit(Command.Press),
-            onStop: () => session.Submit(Command.Release),
-            onCancel: () => session.Submit(Command.Cancel),
-            onLatch: static () => { },
-            onRecordingDiscarded: () => session.Submit(Command.CancelRecording),
+            onStart: () => router.Submit(Command.Press),
+            onStop: () => router.Submit(Command.Release),
+            onCancel: () => router.Submit(Command.Cancel),
+            onLatch: router.KeyLatched,
+            onRecordingDiscarded: () => router.Submit(Command.CancelRecording),
             onHardwareKeyDown: _components.UserInput.Touch);
+        router.SyncGateAfterSession = () => _keyHook?.SyncAfterTerminalPhase();
+        router.ResetGate = () => _keyHook?.ResetGate();
         Session.PhaseChanged += OnPhaseChanged;
         _levelsObserver = Task.Run(() => ObserveLevelsAsync(_lifetime.Token));
     }
@@ -211,6 +215,11 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         Session.PhaseChanged -= OnPhaseChanged;
         _keyHook?.Dispose();
         _mouseHook?.Dispose();
+        if (_speechRouter is not null)
+        {
+            await _speechRouter.DisposeAsync();
+        }
+
         await _lifetime.CancelAsync();
         await Session.DisposeAsync();
         await _levelsObserver;
@@ -237,10 +246,10 @@ public sealed class AppCoordinator : INotifyPropertyChanged, IAsyncDisposable
         _cues.Transition(phase);
 
         // A dictation that ended without a key event leaves the trigger gate latched, which would
-        // swallow the next press.
+        // swallow the next press; the router decides whether the gate is the session's to sync.
         if (phase.IsTerminal)
         {
-            _keyHook?.SyncAfterTerminalPhase();
+            _speechRouter?.SessionReachedTerminalPhase(phase);
         }
     }
 

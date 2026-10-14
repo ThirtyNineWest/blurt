@@ -25,6 +25,9 @@ public sealed class SettingsStores
         OverlayOrigin = new OverlayOriginStore(store);
         Styles = new StyleProfileStore(store, CleanupInstruction.CustomStyleBudget);
         SoundPack = new SoundPackStore(store, soundPacks);
+        SelectionSpeech = new SelectionSpeechStore(store);
+        SelectionAsk = new SelectionAskStore(store);
+        ReadAloudStyle = new ReadAloudStyleStore(store);
     }
 
     /// <summary>The underlying settings file.</summary>
@@ -62,4 +65,13 @@ public sealed class SettingsStores
 
     /// <summary>The selected cue voice.</summary>
     public SoundPackStore SoundPack { get; }
+
+    /// <summary>Whether a press over selected text reads it aloud.</summary>
+    public SelectionSpeechStore SelectionSpeech { get; }
+
+    /// <summary>Whether a hold over selected text asks about it.</summary>
+    public SelectionAskStore SelectionAsk { get; }
+
+    /// <summary>The read-aloud speed and whether jargon is skipped.</summary>
+    public ReadAloudStyleStore ReadAloudStyle { get; }
 }
